@@ -1,6 +1,7 @@
 #include "instrument.hpp"
 #include "function_info.hpp"
 #include "symbol_resolver.hpp"
+#include "module_info.hpp"
 #include <assert.h>
 #include <iostream>
 #include <iomanip>
@@ -13,6 +14,7 @@
 using namespace std;
 extern SymbolResolver      g_symbol_resolver;
 extern stack<FunctionInfo> g_call_stack;
+extern ModuleInfo*         g_module_info;
 
 ostream& out = cerr;
 
@@ -142,10 +144,13 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     }
 
     pair<unsigned, string> moduleid_name;
-    bool ret = g_symbol_resolver.get_symbol_at(pc, &moduleid_name);
+    bool    ret         = g_symbol_resolver.get_symbol_at(pc, &moduleid_name);
+    int     module_id   = g_module_info->get_module_id(pc);
+    ADDRINT module_base = g_module_info->get_img_base(module_id);
+    string  module_name = g_symbol_resolver.get_module_name(module_id);
 
     out << "<bpf beg>  " << (ret ? moduleid_name.second : "unknown");
-    out << " @ 0x" << hex << pc;
+    out << " @ " << module_name << "+0x" << hex << pc - module_base;
     fi.function_name = (ret ? moduleid_name.second : "unknown");
 
     out << " ( ";
@@ -175,11 +180,18 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     }
     out << " )";
     out << "  [ called from ";
+    int     caller_module_id   = g_module_info->get_module_id(fi.callsite);
+    ADDRINT caller_module_base = g_module_info->get_img_base(caller_module_id);
+    string  caller_module_name =
+        g_symbol_resolver.get_module_name(caller_module_id);
+
     if (caller_name != "")
-        out << caller_name << "+" << dec << fi.callsite_offset << " @ 0x" << hex
-            << fi.callsite << " ]";
+        out << caller_name << "+" << dec << fi.callsite_offset << " @ "
+            << caller_module_name << "+0x" << hex
+            << fi.callsite - caller_module_base << " ]";
     else
-        out << " 0x" << hex << fi.callsite << " ]";
+        out << caller_module_name << "+0x" << hex
+            << fi.callsite - caller_module_base << " ]";
 
     if (f->must_skip()) {
         out << "  =>  [ skipped";
