@@ -1,2 +1,7 @@
 .vscode/
 pintool/obj-intel64/
+pintool/pin.log
+pin/
+pin.tar.gz
+pintool.log
+pin.log

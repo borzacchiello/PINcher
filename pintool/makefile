@@ -5,7 +5,8 @@
 ##############################################################
 
 # If the tool is built out of the kit, PIN_ROOT must be specified in the make invocation and point to the kit root.
-PIN_ROOT=/home/luca/bin/pin/pin-3.11-97998-g7ecce2dac-gcc-linux
+ROOT := $(abspath $(shell pwd)/..)
+PIN_ROOT=$(ROOT)/pin
 
 ifdef PIN_ROOT
 CONFIG_ROOT := $(PIN_ROOT)/source/tools/Config

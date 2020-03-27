@@ -1,3 +1,40 @@
 #!/usr/bin/env python3
+import argparse
+import subprocess
+import os
 
-print("todo")
+filepath = os.path.dirname(os.path.abspath(__file__))
+
+
+def main(args):
+    cmd = [os.path.join(filepath, "pin/pin"),
+           "-t",
+           os.path.join(filepath, "pintool/obj-intel64/tracer.so")]
+    if args.bpf is not None:
+        for bpf in args.bpf:
+            cmd.append("-bpf")
+            cmd.append(bpf)
+
+    if args.symbs is not None:
+        cmd.append("-print_symb")
+        cmd.append(args.symbs)
+
+    cmd.append("--")
+    cmd.extend(args.prog)
+
+    subprocess.call(cmd)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Reverse engineering tool for modifying/logging stuff during execution')
+    parser.add_argument('--bpf', metavar='dict', type=str, nargs='*',
+                        help='function breakpoint, described as key:val,... list')
+    parser.add_argument('--symbs', metavar='regex', type=str,
+                        nargs='?', help='print symbols that match the regex')
+    parser.add_argument('prog', type=str, nargs='+',
+                        help='command line of analyzed program')
+    args = parser.parse_args()
+
+    main(args)
