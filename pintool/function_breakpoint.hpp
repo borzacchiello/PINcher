@@ -16,6 +16,7 @@ class FunctionBreakpoint
     unsigned num_args;
     bool     skip;
     unsigned dump_args;
+    bool     dump_callstack;
     bool     change_ret_value;
     size_t   new_ret_value;
     FunctionBreakpoint(map<string, string>& dict);
@@ -29,6 +30,7 @@ class FunctionBreakpoint
     bool         must_change_ret_value() { return change_ret_value; }
     size_t       get_new_ret_value() { return new_ret_value; }
     bool         must_skip() { return skip; }
+    bool         must_dump_callstack() { return dump_callstack; }
     unsigned     get_dump_args() { return dump_args; }
     virtual void dump(ostream& out)                                     = 0;
     virtual bool should_instrument(unsigned long address, string& name) = 0;

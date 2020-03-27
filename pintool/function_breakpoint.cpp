@@ -42,6 +42,12 @@ FunctionBreakpoint::FunctionBreakpoint(map<string, string>& dict)
         dump_args = strtol(_dump_args->second.c_str(), NULL, base);
     }
 
+    auto _dump_callstack = dict.find("bt");
+    if (_dump_callstack == dict.end())
+        dump_callstack = false;
+    else
+        dump_callstack = _dump_callstack->second == "0" ? false : true;
+
     auto _skip = dict.find("skip");
     if (_skip == dict.end())
         skip = false;

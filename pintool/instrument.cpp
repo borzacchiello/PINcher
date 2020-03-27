@@ -48,6 +48,44 @@ VOID InstrumentRet(ADDRINT* rax)
             << endl;
 }
 
+static void print_callstack()
+{
+    out << "\n  CALLSTACK" << endl;
+    stack<FunctionInfo> call_stack_copy;
+
+    unsigned size = g_call_stack.size() - 1;
+    while (size-- > 0) {
+        FunctionInfo f = g_call_stack.top();
+
+        int     caller_module_id = g_module_info->get_module_id(f.callsite);
+        ADDRINT caller_module_base =
+            g_module_info->get_img_base(caller_module_id);
+        string caller_module_name =
+            g_symbol_resolver.get_module_name(caller_module_id);
+
+        out << "  >>> " << caller_module_name << "+0x"
+            << f.callsite - caller_module_base;
+
+        pair<unsigned, string> moduleid_name;
+        bool                   ret = g_symbol_resolver.get_symbol_at(
+            f.callsite - f.callsite_offset, &moduleid_name);
+        if (ret)
+            out << " ( " << moduleid_name.second << "+0x" << f.callsite_offset
+                << " )";
+        out << endl;
+
+        call_stack_copy.push(f);
+        g_call_stack.pop();
+    }
+
+    size = call_stack_copy.size();
+    while (size-- > 0) {
+        FunctionInfo f = call_stack_copy.top();
+        call_stack_copy.pop();
+        g_call_stack.push(f);
+    }
+}
+
 static unsigned long get_function_arg_k(CONTEXT* ctx, unsigned k)
 {
     unsigned long res = 0;
@@ -139,7 +177,6 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
         exit(1);
     }
     FunctionInfo fi = g_call_stack.top();
-    g_call_stack.pop();
     fi.print_ret = true;
 
     string        caller_name = "";
@@ -203,6 +240,10 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     else
         out << caller_module_name << "+0x" << hex
             << fi.callsite - caller_module_base << " ]";
+
+    if (f->must_dump_callstack())
+        print_callstack();
+    g_call_stack.pop();
 
     if (f->must_skip()) {
         out << "  =>  [ skipped";
