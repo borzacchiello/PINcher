@@ -26,38 +26,8 @@ INT32 Usage()
     return -1;
 }
 
-VOID InstrumentCallAfter(ADDRINT ret_pc)
-{
-    FunctionInfo fi;
-    fi.modify_ret_value = false;
-    fi.ret_address      = ret_pc;
-    fi.ret_value        = 0;
-    g_call_stack.push(fi);
-}
-
-VOID InstrumentRet(ADDRINT* rax)
-{
-    FunctionInfo fi = g_call_stack.top();
-    g_call_stack.pop();
-
-    if (fi.modify_ret_value)
-        *rax = fi.ret_value;
-}
-
 VOID Trace(TRACE trace, VOID* v)
 {
-    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
-        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins)) {
-            if (INS_IsCall(ins))
-                INS_InsertCall(ins, IPOINT_TAKEN_BRANCH,
-                               (AFUNPTR)InstrumentCallAfter, IARG_RETURN_IP,
-                               IARG_END);
-            if (INS_IsRet(ins))
-                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InstrumentRet,
-                               IARG_REG_REFERENCE, REG_RAX, IARG_END);
-        }
-    }
-
     BBL first_block       = TRACE_BblHead(trace);
     INS first_instruction = BBL_InsHead(first_block);
 
@@ -69,6 +39,20 @@ VOID Trace(TRACE trace, VOID* v)
         INS_InsertCall(first_instruction, IPOINT_BEFORE, (AFUNPTR)instrumentBPF,
                        IARG_ADDRINT, (ADDRINT)f, IARG_ADDRINT, pc, IARG_CONTEXT,
                        IARG_END);
+    }
+
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins)) {
+            if (INS_IsCall(ins)) {
+                INS_InsertCall(ins, IPOINT_TAKEN_BRANCH,
+                               (AFUNPTR)InstrumentCallAfter, IARG_INST_PTR,
+                               IARG_BRANCH_TARGET_ADDR, IARG_RETURN_IP,
+                               IARG_END);
+            }
+            if (INS_IsRet(ins))
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InstrumentRet,
+                               IARG_REG_REFERENCE, REG_RAX, IARG_END);
+        }
     }
 }
 
@@ -103,6 +87,10 @@ int main(int argc, char* argv[])
     g_module_info    = new ModuleInfo();
 
     cerr.setf(std::ios::unitbuf);
+
+    FunctionInfo fi;
+    fi.function_addr = 0;
+    g_call_stack.push(fi);
 
     TRACE_AddInstrumentFunction(Trace, 0);
     IMG_AddInstrumentFunction(ImageLoad, 0);
