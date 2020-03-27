@@ -29,6 +29,19 @@ FunctionBreakpoint::FunctionBreakpoint(map<string, string>& dict)
     else
         num_args = atoi(_num_args->second.c_str());
 
+    auto _dump_args = dict.find("dump_args");
+    if (_dump_args == dict.end())
+        dump_args = 0;
+    else {
+        unsigned base = is_number(_dump_args->second);
+        if (base == 0) {
+            cerr << "[ERROR FunctionBreakpoint] " << _dump_args->second
+                 << " is not a valid return value" << endl;
+            exit(1);
+        }
+        dump_args = strtol(_dump_args->second.c_str(), NULL, base);
+    }
+
     auto _skip = dict.find("skip");
     if (_skip == dict.end())
         skip = false;
@@ -78,10 +91,11 @@ void FunctionBreakpointRegex::dump(ostream& out)
     out << "FunctionBreakpointRegex {" << endl
         << "\tNameRegex         = " << name_regex << endl
         << "\tCallingConvention = " << calling_convention << endl
-        << "\tNumArgs           = " << num_args << endl
+        << "\tNumArgs           = " << dec << num_args << endl
+        << "\tDumpArgs          = " << dec << dump_args << endl
         << "\tSkip              = " << skip << endl
         << "\tChangeRetValue    = " << change_ret_value << endl
-        << "\tNewRetValue       = " << new_ret_value << endl
+        << "\tNewRetValue       = 0x" << hex << new_ret_value << endl
         << "}" << endl;
 }
 
@@ -110,9 +124,10 @@ void FunctionBreakpointAddress::dump(ostream& out)
         << "\tModule            = "
         << (module_name == "" ? "main_module" : module_name) << endl
         << "\tCallingConvention = " << calling_convention << endl
-        << "\tNumArgs           = " << num_args << endl
+        << "\tNumArgs           = " << dec << num_args << endl
+        << "\tDumpArgs          = " << dec << dump_args << endl
         << "\tSkip              = " << skip << endl
         << "\tChangeRetValue    = " << change_ret_value << endl
-        << "\tNewRetValue       = " << new_ret_value << endl
+        << "\tNewRetValue       = 0x" << hex << new_ret_value << endl
         << "}" << endl;
 }

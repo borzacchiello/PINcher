@@ -33,6 +33,8 @@ VOID Trace(TRACE trace, VOID* v)
 
     // I'm assuming that the first instruction of all calls appears
     // as first instructions in a Trace. Is it correct?
+    // I'm doing the instrumentation in this way to avoid passing the entire
+    // context to every call. It should be slow
     ADDRINT pc = INS_Address(first_instruction);
     auto    f  = g_option_manager->BPF_must_instrument(pc);
     if (f != NULL) {
