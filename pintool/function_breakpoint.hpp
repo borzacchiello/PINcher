@@ -12,6 +12,7 @@ class FunctionBreakpoint
 {
   protected:
     string   calling_convention;
+    string   module_name;
     unsigned num_args;
     bool     skip;
     bool     change_ret_value;

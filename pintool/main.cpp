@@ -1,16 +1,18 @@
-#include "function_info.hpp"
-#include "instrument.hpp"
-#include "option_manager.hpp"
-#include "pin.H"
-#include "symbol_resolver.hpp"
 #include <fstream>
 #include <iostream>
 #include <stack>
+#include "pin.H"
+#include "function_info.hpp"
+#include "instrument.hpp"
+#include "option_manager.hpp"
+#include "symbol_resolver.hpp"
+#include "module_info.hpp"
 
 using namespace std;
 
 SymbolResolver      g_symbol_resolver;
 OptionManager*      g_option_manager;
+ModuleInfo*         g_module_info;
 stack<FunctionInfo> g_call_stack;
 
 KNOB<string> KnobPrintSymbols(KNOB_MODE_WRITEONCE, "pintool", "print_symb", "",
@@ -74,6 +76,7 @@ VOID ImageLoad(IMG img, VOID* v)
 {
     auto module_id        = IMG_Id(img);
     auto module_name_full = IMG_Name(img);
+    g_module_info->add_img(module_id, IMG_LowAddress(img));
     g_symbol_resolver.add_module(module_id, module_name_full);
 
     for (SYM sym = IMG_RegsymHead(img); SYM_Valid(sym); sym = SYM_Next(sym)) {
@@ -84,7 +87,11 @@ VOID ImageLoad(IMG img, VOID* v)
     g_symbol_resolver.print_symbols(cerr, module_id);
 }
 
-VOID Fini(INT32 code, VOID* v) { delete g_option_manager; }
+VOID Fini(INT32 code, VOID* v)
+{
+    delete g_option_manager;
+    delete g_module_info;
+}
 
 int main(int argc, char* argv[])
 {
@@ -93,6 +100,7 @@ int main(int argc, char* argv[])
     PIN_InitSymbols();
 
     g_option_manager = new OptionManager(KnobPrintSymbols, KnobBpf);
+    g_module_info    = new ModuleInfo();
 
     cerr.setf(std::ios::unitbuf);
 

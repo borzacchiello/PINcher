@@ -61,7 +61,26 @@ bool SymbolResolver::get_symbol_at(unsigned long           address,
 
 string SymbolResolver::get_module_name(unsigned module_id)
 {
-    return module_id_to_name[module_id];
+    auto it = module_id_to_name.find(module_id);
+    if (it == module_id_to_name.end()) {
+        cerr << "[ERROR SymbolResolver] module_id: " << module_id << " unknown"
+             << endl;
+        exit(1);
+    }
+
+    return it->second;
+}
+
+unsigned SymbolResolver::get_module_id(string& name)
+{
+    auto it = module_name_to_id.find(name);
+    if (it == module_name_to_id.end()) {
+        cerr << "[ERROR SymbolResolver] module_name: " << name << " unknown"
+             << endl;
+        exit(1);
+    }
+
+    return it->second;
 }
 
 void SymbolResolver::print_all_symbols(ostream& out, unsigned module_id)

@@ -1,6 +1,13 @@
-#include "function_breakpoint.hpp"
 #include <regex.h>
 #include <stdlib.h>
+#include "function_breakpoint.hpp"
+#include "symbol_resolver.hpp"
+#include "module_info.hpp"
+#include "util.hpp"
+
+using namespace std;
+extern SymbolResolver g_symbol_resolver;
+extern ModuleInfo*    g_module_info;
 
 FunctionBreakpoint::FunctionBreakpoint(map<string, string>& dict)
 {
@@ -9,6 +16,12 @@ FunctionBreakpoint::FunctionBreakpoint(map<string, string>& dict)
         calling_convention = "cdecl";
     else
         calling_convention = _cc->second;
+
+    auto _module_name = dict.find("module");
+    if (_module_name == dict.end())
+        module_name = "";
+    else
+        module_name = _module_name->second;
 
     auto _num_args = dict.find("args");
     if (_num_args == dict.end())
@@ -28,7 +41,13 @@ FunctionBreakpoint::FunctionBreakpoint(map<string, string>& dict)
         new_ret_value    = 0;
     } else {
         change_ret_value = true;
-        new_ret_value    = atoi(_ret_value->second.c_str());
+        unsigned base    = is_number(_ret_value->second);
+        if (base == 0) {
+            cerr << "[ERROR FunctionBreakpoint] " << _ret_value->second
+                 << " is not a valid return value" << endl;
+            exit(1);
+        }
+        new_ret_value = strtol(_ret_value->second.c_str(), NULL, base);
     }
 }
 
@@ -76,13 +95,20 @@ FunctionBreakpointAddress::FunctionBreakpointAddress(unsigned long _address,
 bool FunctionBreakpointAddress::should_instrument(unsigned long _address,
                                                   string&       name)
 {
-    return _address == address;
+    unsigned module_id = 1;
+    if (module_name != "") {
+        module_id = g_symbol_resolver.get_module_id(module_name);
+    }
+    unsigned long base_address = g_module_info->get_img_base(module_id);
+    return base_address + address == _address;
 }
 
 void FunctionBreakpointAddress::dump(ostream& out)
 {
     out << "FunctionBreakpointAddress {" << endl
         << "\tAddress           = 0x" << hex << address << endl
+        << "\tModule            = "
+        << (module_name == "" ? "main_module" : module_name) << endl
         << "\tCallingConvention = " << calling_convention << endl
         << "\tNumArgs           = " << num_args << endl
         << "\tSkip              = " << skip << endl

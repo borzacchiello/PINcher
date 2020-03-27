@@ -1,36 +1,14 @@
-#include "option_manager.hpp"
-#include "symbol_resolver.hpp"
 #include <iostream>
 #include <map>
+#include "option_manager.hpp"
+#include "symbol_resolver.hpp"
+#include "util.hpp"
 
 using namespace std;
 
 #define MODULE_SYMBOL_SEPARATOR '#'
 #define KEY_VALUE_SEPARATOR ':'
 #define DICT_VALUES_SEPARATOR ','
-
-static unsigned is_number(const string& s)
-{
-    unsigned i    = 0;
-    unsigned base = 10;
-
-    if (s.size() > 2 && s[0] == '0' && s[1] == 'x') {
-        base = 16;
-        i    = 2;
-    }
-
-    for (; i < s.size(); ++i) {
-        if (base == 10 && !isdigit(s[i])) {
-            base = 0;
-            break;
-        } else if (base == 16 && !isxdigit(s[i])) {
-            base = 0;
-            break;
-        }
-    }
-
-    return base;
-}
 
 static int parse_param(const string& cmd, size_t start, string& param_value,
                        map<string, string>& param_dict)
