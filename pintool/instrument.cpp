@@ -61,10 +61,21 @@ static unsigned long get_function_arg_k(CONTEXT* ctx, unsigned k)
             break;
         }
         case 2: {
+            PIN_GetContextRegval(ctx, REG_RDX, (UINT8*)&res);
+            break;
+        }
+        case 3: {
             PIN_GetContextRegval(ctx, REG_RCX, (UINT8*)&res);
             break;
         }
-
+        case 4: {
+            PIN_GetContextRegval(ctx, REG_R8, (UINT8*)&res);
+            break;
+        }
+        case 5: {
+            PIN_GetContextRegval(ctx, REG_R9, (UINT8*)&res);
+            break;
+        }
         default:
             break;
     }
