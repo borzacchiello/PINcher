@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <vector>
 #include "option_manager.hpp"
 #include "symbol_resolver.hpp"
 #include "util.hpp"
@@ -7,86 +8,6 @@
 using namespace std;
 
 #define MODULE_SYMBOL_SEPARATOR '#'
-#define KEY_VALUE_SEPARATOR ':'
-#define DICT_VALUES_SEPARATOR ','
-
-static int parse_param(const string& cmd, size_t start, string& param_value,
-                       map<string, string>& param_dict)
-{
-    enum class State { ParamValue, Key, Value };
-
-    State  state{State::ParamValue};
-    size_t index = start;
-
-    auto peek = [&](int offset = 0) -> char {
-        if (index + offset >= cmd.size())
-            return 0;
-        return cmd[index + offset];
-    };
-
-    auto consume = [&]() -> char {
-        assert(index < cmd.size());
-        return cmd[index++];
-    };
-
-    vector<char> buffer;
-    string       tmp_key;
-    string       tmp_value;
-
-    auto commit_and_advance_to = [&](auto& output, State new_state) {
-        output = std::string(buffer.begin(), buffer.end());
-        buffer.clear();
-        state = new_state;
-    };
-
-    while (index < cmd.size()) {
-        if (buffer.size() > 256)
-            return -1;
-        switch (state) {
-            case State::ParamValue:
-                if (peek() == DICT_VALUES_SEPARATOR) {
-                    consume();
-                    commit_and_advance_to(param_value, State::Key);
-                    break;
-                } else if (peek() == KEY_VALUE_SEPARATOR || peek() == ' ' ||
-                           peek() == '\t')
-                    return -1;
-
-                buffer.push_back(consume());
-                break;
-            case State::Key:
-                if (peek() == KEY_VALUE_SEPARATOR) {
-                    consume();
-                    commit_and_advance_to(tmp_key, State::Value);
-                    break;
-                } else if (peek() == DICT_VALUES_SEPARATOR || peek() == ' ' ||
-                           peek() == '\t')
-                    return -1;
-
-                buffer.push_back(consume());
-                break;
-            case State::Value:
-                if (peek() == DICT_VALUES_SEPARATOR) {
-                    consume();
-                    commit_and_advance_to(tmp_value, State::Key);
-                    param_dict[tmp_key] = tmp_value;
-                    break;
-                } else if (peek() == KEY_VALUE_SEPARATOR || peek() == ' ' ||
-                           peek() == '\t')
-                    return -1;
-
-                buffer.push_back(consume());
-                break;
-        }
-    }
-
-    if (state == State::ParamValue)
-        param_value = std::string(buffer.begin(), buffer.end());
-    else
-        param_dict[tmp_key] = std::string(buffer.begin(), buffer.end());
-
-    return 0;
-}
 
 void OptionManager::handle_print_symb_regex(const string& print_symb_argv)
 {
@@ -96,7 +17,7 @@ void OptionManager::handle_print_symb_regex(const string& print_symb_argv)
     }
     int res = regcomp(&print_symb_regex, print_symb_argv.c_str(), REG_EXTENDED);
     if (res == -1) {
-        cerr << "[OptionManager] ERROR " << print_symb_argv
+        cerr << "[ERROR OptionManager] " << print_symb_argv
              << " is not a regular expression\n";
         exit(1);
     }
@@ -111,7 +32,7 @@ void OptionManager::handle_bpf(const string& bpf)
     int                 res = parse_param(bpf, 0, value, dict);
 
     if (res == -1) {
-        cerr << "[OptionManager] ERROR \"" << bpf
+        cerr << "[ERROR OptionManager] \"" << bpf
              << "\" is not a valid bpf argument\n";
         exit(1);
     }
@@ -130,14 +51,44 @@ void OptionManager::handle_bpf(const string& bpf)
     // fp->dump(cerr);
 }
 
+void OptionManager::handle_bpx(const string& bpf)
+{
+    // module#function,opt1:val1,opt2:val2...optn:valn
+    string              value;
+    map<string, string> dict;
+    int                 res = parse_param(bpf, 0, value, dict);
+
+    if (res == -1) {
+        cerr << "[ERROR OptionManager]  \"" << bpf
+             << "\" is not a valid bpx argument\n";
+        exit(1);
+    }
+
+    InstructionBreakpoint* ib;
+    unsigned               base = is_number(value);
+    if (base == 0) {
+        cerr << "[ERROR OptionManager]  \"" << value
+             << "\" is not a valid address\n";
+        exit(1);
+    }
+    ib = new InstructionBreakpoint(strtol(value.c_str(), NULL, base), dict);
+
+    bpx_list.push_back(ib);
+    // ib->dump(cerr);
+}
+
 OptionManager::OptionManager(KNOB<string>& print_symb_argv,
-                             KNOB<string>& bpf_list)
+                             KNOB<string>& bpf_list, KNOB<string>& bpx_list)
 {
     handle_print_symb_regex(print_symb_argv.Value());
 
     auto bpf_num = bpf_list.NumberOfValues();
     for (unsigned i = 0; i < bpf_num; ++i)
         handle_bpf(bpf_list.Value(i));
+
+    auto bpx_num = bpx_list.NumberOfValues();
+    for (unsigned i = 0; i < bpx_num; ++i)
+        handle_bpx(bpx_list.Value(i));
 }
 
 OptionManager::~OptionManager()
@@ -169,6 +120,16 @@ FunctionBreakpoint* OptionManager::BPF_must_instrument(unsigned long pc)
         FunctionBreakpoint* f = *it;
         if (f->should_instrument(pc, symbol_name))
             return f;
+    }
+    return NULL;
+}
+
+InstructionBreakpoint* OptionManager::BPX_must_instrument(unsigned long pc)
+{
+    for (auto it = bpx_list.begin(); it != bpx_list.end(); ++it) {
+        InstructionBreakpoint* ib = *it;
+        if (ib->should_instrument(pc))
+            return ib;
     }
     return NULL;
 }

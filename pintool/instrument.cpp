@@ -1,12 +1,13 @@
-#include "instrument.hpp"
-#include "function_info.hpp"
-#include "symbol_resolver.hpp"
-#include "module_info.hpp"
 #include <assert.h>
 #include <iostream>
 #include <iomanip>
 #include <stack>
 #include <unistd.h>
+#include "instrument.hpp"
+#include "function_info.hpp"
+#include "symbol_resolver.hpp"
+#include "module_info.hpp"
+#include "util.hpp"
 
 #define min(x, y) (x) < (y) ? (x) : (y)
 #define LINE_SIZE 16
@@ -146,6 +147,7 @@ static unsigned long is_string(ADDRINT addr)
 
 static void dump_arg_line_k(ADDRINT arg, unsigned line_size)
 {
+    out << "0x" << setfill('0') << setw(16) << hex << arg << ": ";
     unsigned i = 0;
     for (; i < line_size; ++i) {
         if (is_mapped(arg + i)) {
@@ -167,6 +169,15 @@ static void dump_arg_line_k(ADDRINT arg, unsigned line_size)
     out << "\"" << endl;
 }
 
+static void dump_arg(ADDRINT arg, unsigned size)
+{
+    for (unsigned j = 0; j < (size - 1) / LINE_SIZE + 1; ++j) {
+        out << "  ";
+        dump_arg_line_k(arg + j * LINE_SIZE,
+                        min(LINE_SIZE, size - j * LINE_SIZE));
+    }
+}
+
 VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 {
 
@@ -177,7 +188,7 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
         exit(1);
     }
     FunctionInfo fi = g_call_stack.top();
-    fi.print_ret = true;
+    fi.print_ret    = true;
 
     string        caller_name = "";
     unsigned long caller_pc   = 0;
@@ -272,15 +283,100 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
             ADDRINT arg_i = get_function_arg_k(ctx, i);
             if (is_mapped(arg_i)) {
                 out << endl << "  dumping arg " << dec << i << endl;
-                for (unsigned j = 0; j < (dump_args - 1) / LINE_SIZE + 1; ++j) {
-                    out << "  ";
-                    dump_arg_line_k(arg_i + j * LINE_SIZE,
-                                    min(LINE_SIZE, dump_args - j * LINE_SIZE));
-                }
+                dump_arg(arg_i, dump_args);
             }
         }
     }
 
     g_call_stack.push(fi);
     out << endl;
+}
+
+static VOID dump_regs(CONTEXT* ctx)
+{
+    unsigned long res = 0;
+    PIN_GetContextRegval(ctx, REG_RAX, (UINT8*)&res);
+    out << "  ";
+    out << "rax: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RBX, (UINT8*)&res);
+    out << "rbx: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RCX, (UINT8*)&res);
+    out << "rcx: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    out << endl;
+    out << "  ";
+    PIN_GetContextRegval(ctx, REG_RDX, (UINT8*)&res);
+    out << "rdx: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RSI, (UINT8*)&res);
+    out << "rsi: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RDI, (UINT8*)&res);
+    out << "rdi: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    out << endl;
+    out << "  ";
+    PIN_GetContextRegval(ctx, REG_RSP, (UINT8*)&res);
+    out << "rsp: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RBP, (UINT8*)&res);
+    out << "rbp: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    PIN_GetContextRegval(ctx, REG_RIP, (UINT8*)&res);
+    out << "rip: 0x" << setfill('0') << setw(16) << hex << res << "  ";
+    out << endl;
+}
+
+VOID instrumentBPX(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
+{
+    FunctionInfo  fi          = g_call_stack.top();
+    string        caller_name = "";
+    unsigned long caller_pc   = fi.function_addr;
+    if (caller_pc != 0) {
+        pair<unsigned, string> moduleid_name;
+        bool ret = g_symbol_resolver.get_symbol_at(caller_pc, &moduleid_name);
+        if (ret)
+            caller_name =
+                g_symbol_resolver.get_module_name(moduleid_name.first) + "!" +
+                moduleid_name.second;
+    }
+
+    int     module_id   = g_module_info->get_module_id(pc);
+    ADDRINT module_base = g_module_info->get_img_base(module_id);
+    string  module_name = g_symbol_resolver.get_module_name(module_id);
+
+    out << "<bpx beg> " << module_name << "+0x" << hex << pc - module_base;
+    if (caller_name != "") {
+        out << " ( " << caller_name << "+0x" << hex << pc - caller_pc
+            << " )";
+    }
+    out << endl;
+    dump_regs(ctx);
+
+    auto it_dump_reg = f->get_dump_reg_map().begin();
+    while (it_dump_reg != f->get_dump_reg_map().end()) {
+        out << endl;
+
+        LEVEL_BASE::REG reg_id  = it_dump_reg->first;
+        unsigned        reg_len = it_dump_reg->second;
+        unsigned long   reg_val;
+        PIN_GetContextRegval(ctx, reg_id, (UINT8*)&reg_val);
+        if (is_mapped(reg_val)) {
+            out << "  dumping *" << inverted_reg_map[reg_id] << endl;
+            dump_arg(reg_val, reg_len);
+        } else {
+            out << "  " << inverted_reg_map[reg_id] << ": 0x" << hex << reg_val
+                << endl;
+        }
+        it_dump_reg++;
+    }
+
+    auto it_set_map = f->get_set_map().begin();
+    while (it_set_map != f->get_set_map().end()) {
+        out << endl;
+
+        LEVEL_BASE::REG reg_id  = it_set_map->first;
+        unsigned long   reg_val = it_set_map->second;
+
+        PIN_SetContextReg(ctx, reg_id, reg_val);
+        out << "  SET " << inverted_reg_map[reg_id] << " <- 0x" << hex
+            << reg_val << endl;
+        it_set_map++;
+    }
+
+    out << "<bpx end>" << endl;
 }

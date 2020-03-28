@@ -2,8 +2,36 @@
 import argparse
 import subprocess
 import os
+import re
 
 filepath = os.path.dirname(os.path.abspath(__file__))
+
+
+def fix_bpx(arg):
+    set_regex = r"set\(([a-zA-Z0-9]+),\ *([0-9xX]+)\)"
+    dmp_reg_regex = r"dump\(([a-zA-Z0-9]+),\ *([0-9xX]+)\)"
+
+    set_matches = re.findall(set_regex, arg)
+    dmp_reg_matches = re.findall(dmp_reg_regex, arg)
+
+    address = arg.split(",")[0]
+
+    res = address
+    regs = '-'.join([x[0] for x in set_matches])
+    vals = '-'.join([x[1] for x in set_matches])
+
+    if (regs):
+        res += ",set_regs:" + regs
+        res += ",set_vals:" + vals
+
+    regs = '-'.join([x[0] for x in dmp_reg_matches])
+    lens = '-'.join([x[1] for x in dmp_reg_matches])
+
+    if (regs):
+        res += ",dump_regs:" + regs
+        res += ",dump_lengths:" + lens
+
+    return res
 
 
 def main(args):
@@ -14,6 +42,11 @@ def main(args):
         for bpf in args.bpf:
             cmd.append("-bpf")
             cmd.append(bpf)
+
+    if args.bpx is not None:
+        for bpx in args.bpx:
+            cmd.append("-bpx")
+            cmd.append(fix_bpx(bpx))
 
     if args.symbs is not None:
         cmd.append("-print_symb")
@@ -31,6 +64,8 @@ if __name__ == "__main__":
         description='Reverse engineering tool for modifying/logging stuff during execution')
     parser.add_argument('--bpf', metavar='dict', type=str, nargs='*',
                         help='function breakpoint, described as key:val,... list')
+    parser.add_argument('--bpx', metavar='dict', type=str, nargs='*',
+                        help='instruction breakpoint, described as key:val,... list')
     parser.add_argument('--symbs', metavar='regex', type=str,
                         nargs='?', help='print symbols that match the regex')
     parser.add_argument('prog', type=str, nargs='+',

@@ -19,6 +19,8 @@ KNOB<string> KnobPrintSymbols(KNOB_MODE_WRITEONCE, "pintool", "print_symb", "",
                               "Print symbols");
 KNOB<string> KnobBpf(KNOB_MODE_APPEND, "pintool", "bpf", "",
                      "Specify function breakpoint");
+KNOB<string> KnobBpx(KNOB_MODE_APPEND, "pintool", "bpx", "",
+                     "Specify instruction breakpoint");
 
 INT32 Usage()
 {
@@ -51,9 +53,15 @@ VOID Trace(TRACE trace, VOID* v)
                                IARG_BRANCH_TARGET_ADDR, IARG_RETURN_IP,
                                IARG_END);
             }
-            if (INS_IsRet(ins))
+            if (INS_IsRet(ins)) {
                 INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InstrumentRet,
                                IARG_REG_REFERENCE, REG_RAX, IARG_END);
+            }
+            auto ib = g_option_manager->BPX_must_instrument(INS_Address(ins));
+            if (ib != NULL)
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPX,
+                               IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
+                               IARG_CONTEXT, IARG_END);
         }
     }
 }
@@ -85,7 +93,7 @@ int main(int argc, char* argv[])
         return Usage();
     PIN_InitSymbols();
 
-    g_option_manager = new OptionManager(KnobPrintSymbols, KnobBpf);
+    g_option_manager = new OptionManager(KnobPrintSymbols, KnobBpf, KnobBpx);
     g_module_info    = new ModuleInfo();
 
     cerr.setf(std::ios::unitbuf);

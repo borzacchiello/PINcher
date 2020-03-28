@@ -72,6 +72,9 @@ $(OBJDIR)util$(OBJ_SUFFIX): util.cpp
 $(OBJDIR)function_breakpoint$(OBJ_SUFFIX): function_breakpoint.cpp
 	$(CXX) $(TOOL_CXXFLAGS) $(COMP_OBJ)$@ $<
 
+$(OBJDIR)instruction_breakpoint$(OBJ_SUFFIX): instruction_breakpoint.cpp
+	$(CXX) $(TOOL_CXXFLAGS) $(COMP_OBJ)$@ $<
+
 $(OBJDIR)symbol_resolver$(OBJ_SUFFIX): symbol_resolver.cpp
 	$(CXX) $(TOOL_CXXFLAGS) $(COMP_OBJ)$@ $<
 
@@ -88,5 +91,5 @@ $(OBJDIR)main$(OBJ_SUFFIX): main.cpp
 	$(CXX) $(TOOL_CXXFLAGS) $(COMP_OBJ)$@ $<
 
 # Build the tool as a dll (shared object).
-$(OBJDIR)tracer$(PINTOOL_SUFFIX): $(OBJDIR)main$(OBJ_SUFFIX) $(OBJDIR)function_breakpoint$(OBJ_SUFFIX) $(OBJDIR)symbol_resolver$(OBJ_SUFFIX) $(OBJDIR)option_manager$(OBJ_SUFFIX) $(OBJDIR)module_info$(OBJ_SUFFIX) $(OBJDIR)instrument$(OBJ_SUFFIX) $(OBJDIR)util$(OBJ_SUFFIX)
+$(OBJDIR)tracer$(PINTOOL_SUFFIX): $(OBJDIR)main$(OBJ_SUFFIX) $(OBJDIR)function_breakpoint$(OBJ_SUFFIX) $(OBJDIR)instruction_breakpoint$(OBJ_SUFFIX) $(OBJDIR)symbol_resolver$(OBJ_SUFFIX) $(OBJDIR)option_manager$(OBJ_SUFFIX) $(OBJDIR)module_info$(OBJ_SUFFIX) $(OBJDIR)instrument$(OBJ_SUFFIX) $(OBJDIR)util$(OBJ_SUFFIX)
 	$(LINKER) $(TOOL_LDFLAGS_NOOPT) $(LINK_EXE)$@ $(^:%.h=) $(TOOL_LPATHS) $(TOOL_LIBS)
