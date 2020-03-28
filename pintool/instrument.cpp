@@ -321,7 +321,17 @@ static VOID dump_regs(CONTEXT* ctx)
     out << endl;
 }
 
-VOID instrumentBPX(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
+static int bpx_if = 1;
+int        instrumentBPXIf()
+{
+    // this is used to allow the re-execution of the instruction at which the
+    // BPX breakpoint points, without recalling the instrumentation
+    int res = bpx_if;
+    bpx_if  = bpx_if == 0 ? 1 : 0;
+    return res;
+}
+
+VOID instrumentBPXThen(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 {
     FunctionInfo  fi          = g_call_stack.top();
     string        caller_name = "";
@@ -341,8 +351,7 @@ VOID instrumentBPX(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 
     out << "<bpx beg> " << module_name << "+0x" << hex << pc - module_base;
     if (caller_name != "") {
-        out << " ( " << caller_name << "+0x" << hex << pc - caller_pc
-            << " )";
+        out << " ( " << caller_name << "+0x" << hex << pc - caller_pc << " )";
     }
     out << endl;
     dump_regs(ctx);
@@ -379,4 +388,5 @@ VOID instrumentBPX(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     }
 
     out << "<bpx end>" << endl;
+    PIN_ExecuteAt(ctx);
 }

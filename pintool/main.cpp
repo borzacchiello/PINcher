@@ -58,10 +58,14 @@ VOID Trace(TRACE trace, VOID* v)
                                IARG_REG_REFERENCE, REG_RAX, IARG_END);
             }
             auto ib = g_option_manager->BPX_must_instrument(INS_Address(ins));
-            if (ib != NULL)
-                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPX,
+            if (ib != NULL) {
+                INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPXIf,
                                IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
                                IARG_CONTEXT, IARG_END);
+                INS_InsertThenCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPXThen,
+                               IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
+                               IARG_CONTEXT, IARG_END);
+            }
         }
     }
 }
