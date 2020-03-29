@@ -1,6 +1,8 @@
 # PINcher
 This is basically a (partial) reimplementation of [tracer](https://yurichev.com/tracer-en.html) by Dennis Yurichev for linux OS, implemented using Intel PIN.
+
 The tool can perform simple debugging tasks, such as log/modify register/memory values at runtime.
+
 Currently, it only supports x86-64 ELF binaries.
 
 ## Build
@@ -114,7 +116,7 @@ $ pincher --bpx "0x710,set(rdx,0xabadcafe),set(xmm0,16.1)" "0x713,dump(xmm0,1)" 
 ## Example of Use
 #### Change the result of every arithmetic operations in libreoffice calc
 
-We can use `pincher` to change the result of every memory operation performed by libreoffice calc.
+We can use `pincher` to change the result of every arithmetic operation performed by libreoffice calc in a cell.
 
 For example, using `LibreOffice 6.0.7.3 00m0(Build:3)` on `ubuntu 18.04`, we can execute:
 
@@ -122,6 +124,6 @@ For example, using `LibreOffice 6.0.7.3 00m0(Build:3)` on `ubuntu 18.04`, we can
 $ pincher --bpx "0x6ed92e,module:libsclo.so,dump(xmm2,1),set(xmm2,1337.0)" -- /usr/lib/libreoffice/program/soffice.bin
 ```
 
-after some time, libreoffice calc will execute. If we try to perform an arithmetic operation in a cell, we will obtain always `1337` as result.
+after some time, libreoffice calc will start. If we try to perform an arithmetic operation in a cell, we will obtain always `1337` as result.
 
 ![](img/libreoffice_screen.png)
