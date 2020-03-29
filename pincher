@@ -20,14 +20,18 @@ def fix_bpx(arg):
     dmp_reg_matches = re.findall(dmp_reg_regex, arg)
 
     if (set([x[0] for x in set_fp_matches]) - FLOATING_POINT_REGS != set()):
-        not_valid_regs = set([x[0] for x in set_fp_matches]) - FLOATING_POINT_REGS
+        not_valid_regs = set([x[0]
+                              for x in set_fp_matches]) - FLOATING_POINT_REGS
         print(not_valid_regs, "are not valid floating point registers")
         exit(1)
 
     address = arg.split(",")[0]
     other_args = ','.join([x for x in arg.split(",") if ":" in x])
 
-    res = address + "," + other_args
+    if other_args:
+        res = address + "," + other_args
+    else:
+        res = address
     regs = '-'.join([x[0].lower() for x in set_matches])
     vals = '-'.join([x[1].lower() for x in set_matches])
 
@@ -56,7 +60,18 @@ def fix_bpf(arg):
     return arg.replace("skip", "skip:1").replace("bt", "bt:1")
 
 
+def check_elf(arg):
+    with open(arg, "rb") as fin:
+        magic = fin.read(5)
+
+    if magic != b"\x7fELF\x02":
+        print("unsupported filetype")
+        exit(1)
+
+
 def main(args):
+    check_elf(args.prog[0])
+
     cmd = [os.path.join(filepath, "pin/pin"),
            "-t",
            os.path.join(filepath, "pintool/obj-intel64/tracer.so")]
