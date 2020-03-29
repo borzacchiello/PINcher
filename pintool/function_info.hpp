@@ -6,6 +6,7 @@
 struct FunctionInfo {
     unsigned long callsite;
     long          callsite_offset;
+    unsigned long caller_address;
     unsigned long function_addr;
     std::string   function_name;
     unsigned long ret_address;

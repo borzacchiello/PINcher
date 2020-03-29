@@ -40,7 +40,7 @@ The optional arguments are:
 Ex: log all calls to `strcmp`:
 ```
 $ pincher --bpf "strcmp,args:2" -- /path/to/dummy bla
-<bpf beg>  strcmp@plt @ dummy+0x5b0 ( 0x7fffeb6c6e40 "bla", 0x55d823cd77fc "ciao" )  [ called from dummy!main+75 @ dummy+0x72e ]
+<bpf beg>  strcmp@plt @ dummy+0x5b0 ( 0x7fffeb6c6e40 "bla", 0x55d823cd77fc "ciao" )  [ called from dummy!main+0x4b @ dummy+0x72e ]
 <bpf end>  strcmp@plt -> 0xffffffff
 ```
 
@@ -48,7 +48,7 @@ Ex: dump `write` arguments:
 ```
 $ pincher --bpf "write,args:3,dump_args:32" -- /path/to/dummy bla
 ...
-<bpf beg>  write @ libc.so.6+0x110140 ( 0x1, 0x5650223d8260 "I'm in foo!", 0x1d )  [ called from libc.so.6!_IO_file_write+40 @ libc.so.6+0x8b1b8 ]
+<bpf beg>  write @ libc.so.6+0x110140 ( 0x1, 0x5650223d8260 "I'm in foo!", 0x1d )  [ called from libc.so.6!_IO_file_write+0x28 @ libc.so.6+0x8b1b8 ]
   dumping arg 1
   0x00005650223d8260: 49 27 6d 20 69 6e 20 66 6f 6f 21 0a 49 27 6d 20   "I'm in foo!.I'm "
   0x00005650223d8270: 69 6e 20 62 61 72 21 0a 61 3a 20 33 0a 00 00 00   "in bar!.a: 3...."
@@ -58,16 +58,19 @@ $ pincher --bpf "write,args:3,dump_args:32" -- /path/to/dummy bla
 
 Ex: dump `write` backtrace:
 ```
-<bpf beg>  write @ libc.so.6+0x110140 ( 0x1, 0x55b2fa732260 "I'm in foo!", 0x1d )  [ called from libc.so.6!_IO_file_write+40 @ libc.so.6+0x8b1b8 ]
+$ pincher --bpf "write,args:3,bt" -- /home/luca/Documents/code/c/dummy/dummy bla
+...
+<bpf beg>  write @ libc.so.6+0x110140 ( 0x1, 0x55b978779260 "I'm in foo!", 0xc )  [ called from libc.so.6!_IO_file_write+0x28 @ libc.so.6+0x8b1b8 ]
   CALLSTACK
   >>> libc.so.6+0x8b1b8 ( _IO_file_write+0x28 )
-  >>> libc.so.6+0x8cf4d ( _IO_file_overflow+0xfffffffffffffc4d )
-  >>> libc.so.6+0x8f1ff
-  >>> libc.so.6+0x8f400
-  >>> libc.so.6+0x43100
-  >>> libc.so.6+0x43135 ( exit+0x15 )
-  >>> libc.so.6+0x21b99 ( __libc_start_main+0xe9 )
-<bpf end>  write -> 0x1d
+  >>> libc.so.6+0x8cf4d ( _IO_do_write+0xad )
+  >>> libc.so.6+0x8d3fe ( __overflow+0xfffffffffffff56e [ tailjmp? ] )
+  >>> libc.so.6+0x80b5d ( puts@plt+0x296ddd45960d [ tailjmp? ] )
+  >>> dummy+0x687 ( bar+0xb )
+  >>> dummy+0x6bb ( main+0x28 )
+  >>> libc.so.6+0x21b95 ( __libc_start_main+0xe5 )
+<bpf end>  write -> 0xc
+...
 ```
 
 #### Generic Breakpoint (bpx)

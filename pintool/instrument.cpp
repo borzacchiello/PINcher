@@ -15,9 +15,9 @@
 #define LINE_SIZE 16
 
 using namespace std;
-extern SymbolResolver      g_symbol_resolver;
+extern SymbolResolver                g_symbol_resolver;
 extern ForgetfulStack<FunctionInfo>* g_call_stack;
-extern ModuleInfo*         g_module_info;
+extern ModuleInfo*                   g_module_info;
 
 ostream& out = cerr;
 
@@ -26,8 +26,12 @@ VOID InstrumentCallAfter(ADDRINT call_pc, ADDRINT dest_pc, ADDRINT ret_pc)
     unsigned long caller_address = g_call_stack->top().function_addr;
 
     FunctionInfo fi;
-    fi.callsite         = call_pc;
-    fi.callsite_offset  = caller_address != 0 ? (call_pc - caller_address) : -1;
+    fi.callsite = call_pc;
+    fi.callsite_offset =
+        (caller_address != 0) // this can be negative due to tail jumps
+            ? (call_pc - caller_address)
+            : -1;
+    fi.caller_address   = caller_address;
     fi.function_addr    = dest_pc;
     fi.function_name    = "";
     fi.ret_address      = ret_pc;
@@ -71,11 +75,13 @@ static void print_callstack()
         pair<unsigned, string> moduleid_name;
         bool                   ret = g_symbol_resolver.get_symbol_at(
             f.callsite - f.callsite_offset, &moduleid_name);
-        if (ret)
-            out << " ( " << moduleid_name.second << "+0x" << f.callsite_offset
-                << " )";
+        if (ret) {
+            out << " ( " << moduleid_name.second << "+0x" << f.callsite_offset;
+            if (f.callsite_offset < 0 || f.callsite_offset > 0x10000)
+                out << " [ tailjmp? ]";
+            out << " )";
+        }
         out << endl;
-
         call_stack_copy.push(f);
     }
 
@@ -192,8 +198,8 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 
     string        caller_name = "";
     unsigned long caller_pc   = 0;
-    if (fi.callsite_offset != -1) {
-        caller_pc = fi.callsite - fi.callsite_offset;
+    if (fi.caller_address != 0) {
+        caller_pc = fi.caller_address;
         pair<unsigned, string> moduleid_name;
         bool ret = g_symbol_resolver.get_symbol_at(caller_pc, &moduleid_name);
         if (ret)
@@ -244,8 +250,8 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     string  caller_module_name =
         g_symbol_resolver.get_module_name(caller_module_id);
 
-    if (caller_name != "")
-        out << caller_name << "+" << dec << fi.callsite_offset << " @ "
+    if (caller_name != "" && fi.callsite_offset != -1)
+        out << caller_name << "+0x" << hex << fi.callsite_offset << " @ "
             << caller_module_name << "+0x" << hex
             << fi.callsite - caller_module_base << " ]";
     else
