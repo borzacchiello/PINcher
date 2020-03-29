@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 #include "instruction_breakpoint.hpp"
 #include "symbol_resolver.hpp"
 #include "module_info.hpp"
@@ -27,6 +28,17 @@ static unsigned long get_value_or_die(string& value_str)
         exit(1);
     }
     return strtol(value_str.c_str(), NULL, base);
+}
+
+static double get_fp_value_of_die(string& value_str)
+{
+    if (!is_double(value_str)) {
+        cerr << "[ERROR InstructionBreakpoint] " << value_str
+             << " is not a valid floating point value" << endl;
+        exit(1);
+    }
+
+    return atof(value_str.c_str());
 }
 
 InstructionBreakpoint::InstructionBreakpoint(unsigned long        _address,
@@ -76,6 +88,44 @@ InstructionBreakpoint::InstructionBreakpoint(unsigned long        _address,
         for (unsigned i = 0; i < processed_regs_list.size(); ++i) {
             set_map[get_reg_or_die(processed_regs_list[i])] =
                 get_value_or_die(processed_vals_list[i]);
+        }
+    }
+
+    auto set_fp_regs = dict.find("set_fp_regs");
+    auto set_fp_vals = dict.find("set_fp_vals");
+    if (set_fp_regs != dict.end()) {
+        if (set_fp_vals == dict.end()) {
+            cerr << "[ERROR InstructionBreakpoint] set_fp_regs without "
+                    "set_fp_vals"
+                 << endl;
+            exit(1);
+        }
+        string         unprocessed_regs_list = set_fp_regs->second;
+        vector<string> processed_regs_list;
+        auto res_regs = parse_list(unprocessed_regs_list, processed_regs_list);
+        if (res_regs == -1) {
+            cerr << "[ERROR InstructionBreakpoint] " << unprocessed_regs_list
+                 << " is not a valid list for set_fp_regs" << endl;
+            exit(1);
+        }
+        string         unprocessed_vals_list = set_fp_vals->second;
+        vector<string> processed_vals_list;
+        auto res_vals = parse_list(unprocessed_vals_list, processed_vals_list);
+        if (res_vals == -1) {
+            cerr << "[ERROR InstructionBreakpoint] " << unprocessed_vals_list
+                 << " is not a valid list for set_fp_vals" << endl;
+            exit(1);
+        }
+        if (processed_vals_list.size() != processed_regs_list.size()) {
+            cerr << "[ERROR InstructionBreakpoint] different set_fp_regs and "
+                    "set_fp_vals len"
+                 << endl;
+            exit(1);
+        }
+
+        for (unsigned i = 0; i < processed_regs_list.size(); ++i) {
+            set_fp_map[get_reg_or_die(processed_regs_list[i])] =
+                get_fp_value_of_die(processed_vals_list[i]);
         }
     }
 
@@ -143,6 +193,14 @@ void InstructionBreakpoint::dump(ostream& out)
         out << "  SET(" << inverted_reg_map[reg_id] << ", 0x" << hex << reg_val
             << ")" << endl;
         itset++;
+    }
+    auto it_fp_set = set_fp_map.begin();
+    while (it_fp_set != set_fp_map.end()) {
+        LEVEL_BASE::REG reg_id  = it_fp_set->first;
+        double          reg_val = it_fp_set->second;
+        out << "  SET(" << inverted_reg_map[reg_id] << ", " << reg_val
+            << ")" << endl;
+        it_fp_set++;
     }
     auto itdump_reg = dump_reg_map.begin();
     while (itdump_reg != dump_reg_map.end()) {

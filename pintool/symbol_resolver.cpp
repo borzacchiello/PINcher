@@ -1,5 +1,8 @@
 #include "symbol_resolver.hpp"
+#include "module_info.hpp"
 #include <string>
+
+extern ModuleInfo* g_module_info;
 
 string extract_filename(const std::string& fullPath)
 {
@@ -106,13 +109,15 @@ void SymbolResolver::print_symbols(ostream& out, unsigned module_id)
     if (symbols_in_module_it == symbol_to_address.end())
         return;
 
-    string module_name = module_id_to_name[module_id];
+    string        module_name = module_id_to_name[module_id];
+    unsigned long module_base = g_module_info->get_img_base(module_id);
 
     for (auto it = symbols_in_module_it->second.begin();
          it != symbols_in_module_it->second.end(); it++) {
         if (g_option_manager->SYMB_must_be_printed(module_name,
                                                    (string&)it->first))
-            out << "SYMBOL:\t[Address] 0x" << hex << it->second << "\t[Module] "
-                << module_name << "\t[SymbolName] " << it->first << endl;
+            out << "<symbol>  [Address] 0x" << hex << it->second << " ( "
+                << module_name << "+0x" << hex << it->second - module_base
+                << " )\t[SymbolName] " << it->first << endl;
     }
 }

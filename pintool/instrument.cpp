@@ -321,6 +321,33 @@ static VOID dump_regs(CONTEXT* ctx)
     out << endl;
 }
 
+static VOID dump_fp_regs(CONTEXT* ctx)
+{
+    double res = 0;
+    PIN_GetContextRegval(ctx, REG_ST0, (UINT8*)&res);
+    if (res == 0)
+        return;
+    out << "  ";
+    out << "st0: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST1, (UINT8*)&res);
+    out << "st1: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST2, (UINT8*)&res);
+    out << "st2: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST3, (UINT8*)&res);
+    out << "st3: " << fixed << setprecision(9) << res << "\t";
+    out << endl;
+    out << "  ";
+    PIN_GetContextRegval(ctx, REG_ST4, (UINT8*)&res);
+    out << "st4: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST5, (UINT8*)&res);
+    out << "st5: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST6, (UINT8*)&res);
+    out << "st6: " << fixed << setprecision(9) << res << "\t";
+    PIN_GetContextRegval(ctx, REG_ST7, (UINT8*)&res);
+    out << "st7: " << fixed << setprecision(9) << res << "\t";
+    out << endl;
+}
+
 static int bpx_if = 1;
 int        instrumentBPXIf()
 {
@@ -355,6 +382,7 @@ VOID instrumentBPXThen(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
     }
     out << endl;
     dump_regs(ctx);
+    dump_fp_regs(ctx);
 
     auto it_dump_reg = f->get_dump_reg_map().begin();
     while (it_dump_reg != f->get_dump_reg_map().end()) {
@@ -381,10 +409,22 @@ VOID instrumentBPXThen(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
         LEVEL_BASE::REG reg_id  = it_set_map->first;
         unsigned long   reg_val = it_set_map->second;
 
-        PIN_SetContextReg(ctx, reg_id, reg_val);
+        PIN_SetContextRegval(ctx, reg_id, (UINT8*)&reg_val);
         out << "  SET " << inverted_reg_map[reg_id] << " <- 0x" << hex
             << reg_val << endl;
         it_set_map++;
+    }
+    auto it_set_fp_map = f->get_set_fp_map().begin();
+    while (it_set_fp_map != f->get_set_fp_map().end()) {
+        out << endl;
+
+        LEVEL_BASE::REG reg_id  = it_set_fp_map->first;
+        double          reg_val = it_set_fp_map->second;
+
+        PIN_SetContextRegval(ctx, reg_id, (UINT8*)&reg_val);
+        out << "  SET " << inverted_reg_map[reg_id] << " <- " << reg_val
+            << endl;
+        it_set_fp_map++;
     }
 
     out << "<bpx end>" << endl;

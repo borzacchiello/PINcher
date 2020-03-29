@@ -37,9 +37,24 @@ unsigned is_number(const string& s)
     return base;
 }
 
-int parse_list(const string& cmd, vector<string>& out_list) {
-    size_t index = 0;
-    string tmp_v;
+int is_double(const std::string& s)
+{
+    bool point_encountered = false;
+    for (unsigned i = 0; i < s.size(); ++i) {
+        if (s[i] == '.') {
+            if (point_encountered)
+                return 0;
+            point_encountered = true;
+        } else if (!isdigit(s[i]))
+            return 0;
+    }
+    return 1;
+}
+
+int parse_list(const string& cmd, vector<string>& out_list)
+{
+    size_t       index = 0;
+    string       tmp_v;
     vector<char> buffer;
 
     auto peek = [&](int offset = 0) -> char {
@@ -79,7 +94,7 @@ int parse_list(const string& cmd, vector<string>& out_list) {
 }
 
 int parse_param(const string& cmd, size_t start, string& param_value,
-                       map<string, string>& param_dict)
+                map<string, string>& param_dict)
 {
     enum class State { ParamValue, Key, Value };
 
@@ -191,6 +206,39 @@ void init_reg_map()
     inverted_reg_map[LEVEL_BASE::REG_RSP] = "rsp";
     reg_map["rbp"]                        = LEVEL_BASE::REG_RBP;
     inverted_reg_map[LEVEL_BASE::REG_RBP] = "rbp";
+
+    reg_map["st0"]                         = LEVEL_BASE::REG_ST0;
+    inverted_reg_map[LEVEL_BASE::REG_ST0]  = "st0";
+    reg_map["st1"]                         = LEVEL_BASE::REG_ST1;
+    inverted_reg_map[LEVEL_BASE::REG_ST1]  = "st1";
+    reg_map["st2"]                         = LEVEL_BASE::REG_ST2;
+    inverted_reg_map[LEVEL_BASE::REG_ST2]  = "st2";
+    reg_map["st3"]                         = LEVEL_BASE::REG_ST3;
+    inverted_reg_map[LEVEL_BASE::REG_ST3]  = "st3";
+    reg_map["st4"]                         = LEVEL_BASE::REG_ST4;
+    inverted_reg_map[LEVEL_BASE::REG_ST4]  = "st4";
+    reg_map["st5"]                         = LEVEL_BASE::REG_ST5;
+    inverted_reg_map[LEVEL_BASE::REG_ST5]  = "st5";
+    reg_map["st6"]                         = LEVEL_BASE::REG_ST6;
+    inverted_reg_map[LEVEL_BASE::REG_ST6]  = "st6";
+    reg_map["st7"]                         = LEVEL_BASE::REG_ST7;
+    inverted_reg_map[LEVEL_BASE::REG_ST7]  = "st7";
+    reg_map["xmm0"]                        = LEVEL_BASE::REG_XMM0;
+    inverted_reg_map[LEVEL_BASE::REG_XMM0] = "xmm0";
+    reg_map["xmm1"]                        = LEVEL_BASE::REG_XMM1;
+    inverted_reg_map[LEVEL_BASE::REG_XMM1] = "xmm1";
+    reg_map["xmm2"]                        = LEVEL_BASE::REG_XMM2;
+    inverted_reg_map[LEVEL_BASE::REG_XMM2] = "xmm2";
+    reg_map["xmm3"]                        = LEVEL_BASE::REG_XMM3;
+    inverted_reg_map[LEVEL_BASE::REG_XMM3] = "xmm3";
+    reg_map["xmm4"]                        = LEVEL_BASE::REG_XMM4;
+    inverted_reg_map[LEVEL_BASE::REG_XMM4] = "xmm4";
+    reg_map["xmm5"]                        = LEVEL_BASE::REG_XMM5;
+    inverted_reg_map[LEVEL_BASE::REG_XMM5] = "xmm5";
+    reg_map["xmm6"]                        = LEVEL_BASE::REG_XMM6;
+    inverted_reg_map[LEVEL_BASE::REG_XMM6] = "xmm6";
+    reg_map["xmm7"]                        = LEVEL_BASE::REG_XMM7;
+    inverted_reg_map[LEVEL_BASE::REG_XMM7] = "xmm7";
 
     reg_map_initialized = true;
 }
