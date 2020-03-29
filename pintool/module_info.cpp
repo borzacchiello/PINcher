@@ -1,4 +1,7 @@
 #include "module_info.hpp"
+#include "symbol_resolver.hpp"
+
+extern SymbolResolver g_symbol_resolver;
 
 ADDRINT ModuleInfo::get_img_base(unsigned id)
 {
@@ -22,4 +25,14 @@ int ModuleInfo::get_module_id(ADDRINT address)
                 return IMG_Id(img);
 
     return -1;
+}
+
+bool ModuleInfo::was_loaded_module(unsigned id)
+{
+    return img_id_to_base.find(id) != img_id_to_base.end();
+}
+
+bool ModuleInfo::was_loaded_module(string& name)
+{
+    return g_symbol_resolver.exists_module_name(name);
 }

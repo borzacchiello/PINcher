@@ -116,7 +116,7 @@ bool FunctionBreakpointAddress::should_instrument(unsigned long _address,
                                                   string&       name)
 {
     unsigned module_id = 1;
-    if (module_name != "") {
+    if (module_name != "" && g_module_info->was_loaded_module(module_name)) {
         module_id = g_symbol_resolver.get_module_id(module_name);
     }
     unsigned long base_address = g_module_info->get_img_base(module_id);

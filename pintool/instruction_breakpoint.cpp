@@ -173,7 +173,7 @@ InstructionBreakpoint::InstructionBreakpoint(unsigned long        _address,
 bool InstructionBreakpoint::should_instrument(unsigned long address_)
 {
     unsigned module_id = 1;
-    if (module_name != "") {
+    if (module_name != "" && g_module_info->was_loaded_module(module_name)) {
         module_id = g_symbol_resolver.get_module_id(module_name);
     }
     unsigned long base_address = g_module_info->get_img_base(module_id);
@@ -198,8 +198,8 @@ void InstructionBreakpoint::dump(ostream& out)
     while (it_fp_set != set_fp_map.end()) {
         LEVEL_BASE::REG reg_id  = it_fp_set->first;
         double          reg_val = it_fp_set->second;
-        out << "  SET(" << inverted_reg_map[reg_id] << ", " << reg_val
-            << ")" << endl;
+        out << "  SET(" << inverted_reg_map[reg_id] << ", " << reg_val << ")"
+            << endl;
         it_fp_set++;
     }
     auto itdump_reg = dump_reg_map.begin();

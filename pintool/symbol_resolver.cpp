@@ -86,6 +86,11 @@ unsigned SymbolResolver::get_module_id(string& name)
     return it->second;
 }
 
+bool SymbolResolver::exists_module_name(string& name)
+{
+    return module_name_to_id.find(name) != module_name_to_id.end();
+}
+
 void SymbolResolver::print_all_symbols(ostream& out, unsigned module_id)
 {
     auto symbols_in_module_it = symbol_to_address.find(module_id);

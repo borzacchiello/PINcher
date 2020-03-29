@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
-#include <stack>
 #include "pin.H"
+#include "fogetful_stack.hpp"
 #include "function_info.hpp"
 #include "instrument.hpp"
 #include "option_manager.hpp"
@@ -10,10 +10,10 @@
 
 using namespace std;
 
-SymbolResolver      g_symbol_resolver;
-OptionManager*      g_option_manager;
-ModuleInfo*         g_module_info;
-stack<FunctionInfo> g_call_stack;
+SymbolResolver                g_symbol_resolver;
+OptionManager*                g_option_manager;
+ModuleInfo*                   g_module_info;
+ForgetfulStack<FunctionInfo>* g_call_stack;
 
 KNOB<string> KnobPrintSymbols(KNOB_MODE_WRITEONCE, "pintool", "print_symb", "",
                               "Print symbols");
@@ -60,11 +60,12 @@ VOID Trace(TRACE trace, VOID* v)
             auto ib = g_option_manager->BPX_must_instrument(INS_Address(ins));
             if (ib != NULL) {
                 INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPXIf,
-                               IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
-                               IARG_CONTEXT, IARG_END);
-                INS_InsertThenCall(ins, IPOINT_BEFORE, (AFUNPTR)instrumentBPXThen,
-                               IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
-                               IARG_CONTEXT, IARG_END);
+                                 IARG_ADDRINT, (ADDRINT)ib, IARG_INST_PTR,
+                                 IARG_CONTEXT, IARG_END);
+                INS_InsertThenCall(ins, IPOINT_BEFORE,
+                                   (AFUNPTR)instrumentBPXThen, IARG_ADDRINT,
+                                   (ADDRINT)ib, IARG_INST_PTR, IARG_CONTEXT,
+                                   IARG_END);
             }
         }
     }
@@ -89,6 +90,7 @@ VOID Fini(INT32 code, VOID* v)
 {
     delete g_option_manager;
     delete g_module_info;
+    delete g_call_stack;
 }
 
 int main(int argc, char* argv[])
@@ -97,14 +99,14 @@ int main(int argc, char* argv[])
         return Usage();
     PIN_InitSymbols();
 
+    FunctionInfo empty_el;
+    empty_el.function_addr = 0;
+
     g_option_manager = new OptionManager(KnobPrintSymbols, KnobBpf, KnobBpx);
     g_module_info    = new ModuleInfo();
+    g_call_stack     = new ForgetfulStack<FunctionInfo>(20, empty_el);
 
     cerr.setf(std::ios::unitbuf);
-
-    FunctionInfo fi;
-    fi.function_addr = 0;
-    g_call_stack.push(fi);
 
     TRACE_AddInstrumentFunction(Trace, 0);
     IMG_AddInstrumentFunction(ImageLoad, 0);

@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <iostream>
 #include <iomanip>
-#include <stack>
 #include <unistd.h>
+#include <stack>
+#include "fogetful_stack.hpp"
 #include "instrument.hpp"
 #include "function_info.hpp"
 #include "symbol_resolver.hpp"
@@ -10,18 +11,19 @@
 #include "util.hpp"
 
 #define min(x, y) (x) < (y) ? (x) : (y)
+
 #define LINE_SIZE 16
 
 using namespace std;
 extern SymbolResolver      g_symbol_resolver;
-extern stack<FunctionInfo> g_call_stack;
+extern ForgetfulStack<FunctionInfo>* g_call_stack;
 extern ModuleInfo*         g_module_info;
 
 ostream& out = cerr;
 
 VOID InstrumentCallAfter(ADDRINT call_pc, ADDRINT dest_pc, ADDRINT ret_pc)
 {
-    unsigned long caller_address = g_call_stack.top().function_addr;
+    unsigned long caller_address = g_call_stack->top().function_addr;
 
     FunctionInfo fi;
     fi.callsite         = call_pc;
@@ -33,13 +35,12 @@ VOID InstrumentCallAfter(ADDRINT call_pc, ADDRINT dest_pc, ADDRINT ret_pc)
     fi.modify_ret_value = false;
     fi.print_ret        = false;
 
-    g_call_stack.push(fi);
+    g_call_stack->push(fi);
 }
 
 VOID InstrumentRet(ADDRINT* rax)
 {
-    FunctionInfo fi = g_call_stack.top();
-    g_call_stack.pop();
+    FunctionInfo fi = g_call_stack->pop();
 
     if (fi.modify_ret_value)
         *rax = fi.ret_value;
@@ -54,9 +55,9 @@ static void print_callstack()
     out << "\n  CALLSTACK" << endl;
     stack<FunctionInfo> call_stack_copy;
 
-    unsigned size = g_call_stack.size() - 1;
+    unsigned size = g_call_stack->size() - 1;
     while (size-- > 0) {
-        FunctionInfo f = g_call_stack.top();
+        FunctionInfo f = g_call_stack->pop();
 
         int     caller_module_id = g_module_info->get_module_id(f.callsite);
         ADDRINT caller_module_base =
@@ -76,14 +77,13 @@ static void print_callstack()
         out << endl;
 
         call_stack_copy.push(f);
-        g_call_stack.pop();
     }
 
     size = call_stack_copy.size();
     while (size-- > 0) {
         FunctionInfo f = call_stack_copy.top();
         call_stack_copy.pop();
-        g_call_stack.push(f);
+        g_call_stack->push(f);
     }
 }
 
@@ -183,11 +183,11 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 
     // f->dump(out);
 
-    if (g_call_stack.size() == 0) {
+    if (g_call_stack->size() == 0) {
         cerr << "ERROR: shadow call stack is empty in instrumentBPF\n";
         exit(1);
     }
-    FunctionInfo fi = g_call_stack.top();
+    FunctionInfo fi = g_call_stack->top();
     fi.print_ret    = true;
 
     string        caller_name = "";
@@ -254,7 +254,7 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 
     if (f->must_dump_callstack())
         print_callstack();
-    g_call_stack.pop();
+    g_call_stack->pop();
 
     if (f->must_skip()) {
         out << "  =>  [ skipped";
@@ -274,7 +274,7 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
         out << "  =>  [ force ret: 0x" << hex << f->get_new_ret_value() << " ]";
         fi.modify_ret_value = true;
         fi.ret_value        = f->get_new_ret_value();
-        g_call_stack.push(fi);
+        g_call_stack->push(fi);
     }
 
     unsigned dump_args = f->get_dump_args();
@@ -288,7 +288,7 @@ VOID instrumentBPF(FunctionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
         }
     }
 
-    g_call_stack.push(fi);
+    g_call_stack->push(fi);
     out << endl;
 }
 
@@ -360,7 +360,7 @@ int        instrumentBPXIf()
 
 VOID instrumentBPXThen(InstructionBreakpoint* f, ADDRINT pc, CONTEXT* ctx)
 {
-    FunctionInfo  fi          = g_call_stack.top();
+    FunctionInfo  fi          = g_call_stack->top();
     string        caller_name = "";
     unsigned long caller_pc   = fi.function_addr;
     if (caller_pc != 0) {

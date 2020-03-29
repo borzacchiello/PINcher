@@ -26,6 +26,7 @@ class SymbolResolver
     bool get_symbol_address(string& symbol, unsigned module_id,
                             unsigned long* res);
     bool get_symbol_at(unsigned long address, pair<unsigned, string>* res);
+    bool     exists_module_name(string& name);
     string   get_module_name(unsigned module_id);
     unsigned get_module_id(string& name);
     void     print_all_symbols(ostream& out, unsigned module_id);
