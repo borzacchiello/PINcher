@@ -21,7 +21,7 @@ $ pincher --symbs "dummy#.*" -- /path/to/dummy
 ```
 Ex: print all symbols in libc (loaded by dummy):
 ```
-pincher --symbs "libc.*#.*" -- /path/to/dummy
+$ pincher --symbs "libc.*#.*" -- /path/to/dummy
 ...
 <symbol>  [Address] 0x7fb5ec041bb0 ( libc.so.6+0x43bb0 )	[SymbolName] srand
 ...
@@ -74,7 +74,7 @@ $ pincher --bpf "write,args:3,bt" -- /home/luca/Documents/code/c/dummy/dummy bla
 ```
 
 #### Generic Breakpoint (bpx)
-`--bpx <address>,<opt>,...`: log the state of the machine just before that the instruction at address was executed. 
+`--bpx <address>,<opt>,...`: log the state of the machine just before the execution of the the instruction at address. 
 
 As for `bpf`, it is possible to specify other optional arguments:
 - `module:<module_name>`: as before, this is the name of the module whose base is used to calculate the virtual address. If omitted, the base of the main module is used.
@@ -124,7 +124,7 @@ We can use `pincher` to change the result of every arithmetic operation performe
 For example, using `LibreOffice 6.0.7.3 00m0(Build:3)` on `ubuntu 18.04`, we can execute:
 
 ```
-$ pincher --bpx "0x6ed92e,module:libsclo.so,dump(xmm2,1),set(xmm2,1337.0)" -- /usr/lib/libreoffice/program/soffice.bin
+$ pincher --bpx "0x6ed92e,module:libsclo.so,dump(xmm2,1),set(xmm2,1337.0)" -- /usr/lib/libreoffice/program/soffice.bin --calc
 ```
 
 after some time, libreoffice calc will start. If we try to perform an arithmetic operation in a cell, we will obtain always `1337` as result.

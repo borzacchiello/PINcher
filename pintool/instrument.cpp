@@ -165,7 +165,7 @@ static void dump_arg_line_k(ADDRINT arg, unsigned line_size)
         out << "   ";
 
     out << "  \"";
-    for (unsigned j = 0; j < line_size; ++j) {
+    for (unsigned j = 0; j < i; ++j) {
         char c = *(char*)(arg + j);
         if (c >= ' ' && c <= '~')
             out << c;

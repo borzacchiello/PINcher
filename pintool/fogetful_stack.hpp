@@ -26,7 +26,7 @@ template <typename T> class ForgetfulStack
     {
         buffer[head] = value;
         head         = (head + 1) % max_size;
-        n_el++;
+        n_el         = min(n_el + 1, max_size);
     }
 
     T pop()
