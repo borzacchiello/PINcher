@@ -3,6 +3,7 @@
 
 #include "function_breakpoint.hpp"
 #include "instruction_breakpoint.hpp"
+#include "module_info.hpp"
 #include "pin.H"
 #include <regex.h>
 #include <string>
@@ -11,6 +12,7 @@
 
 class SymbolResolver;
 extern SymbolResolver g_symbol_resolver;
+extern ModuleInfo*    g_module_info;
 
 using namespace std;
 

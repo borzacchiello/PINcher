@@ -156,15 +156,22 @@ void OptionManager::dump_callgraph()
     }
 
     pair<unsigned, string> moduleid_name_src, moduleid_name_dst;
-    bool                   ret_src, ret_dst;
 
     out << "digraph {" << endl
         << "\tnode [shape=box];" << endl
         << "\tnode [fontname = \"monospace\"];" << endl;
     for (auto edge : callgraph_edges) {
-        ret_src =
+
+        int module_id_src = g_module_info->get_module_id(edge.first);
+        int module_id_dst = g_module_info->get_module_id(edge.second);
+
+        if (module_id_src != 1 || module_id_dst != 1)
+            // I'm interested in function calls of the main image
+            continue;
+
+        bool ret_src =
             g_symbol_resolver.get_symbol_at(edge.first, &moduleid_name_src);
-        ret_dst =
+        bool ret_dst =
             g_symbol_resolver.get_symbol_at(edge.second, &moduleid_name_dst);
 
         if (!ret_src || !ret_dst)
