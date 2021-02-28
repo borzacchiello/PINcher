@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <vector>
 #include "option_manager.hpp"
@@ -78,9 +79,11 @@ void OptionManager::handle_bpx(const string& bpf)
 }
 
 OptionManager::OptionManager(KNOB<string>& print_symb_argv,
+                             KNOB<string>& dump_callgraph,
                              KNOB<string>& bpf_list, KNOB<string>& bpx_list)
 {
     handle_print_symb_regex(print_symb_argv.Value());
+    callgraph_filename = dump_callgraph.Value();
 
     auto bpf_num = bpf_list.NumberOfValues();
     for (unsigned i = 0; i < bpf_num; ++i)
@@ -95,6 +98,10 @@ OptionManager::~OptionManager()
 {
     for (auto p : bpf_list) {
         delete p;
+    }
+
+    if (!callgraph_filename.empty()) {
+        dump_callgraph();
     }
 }
 
@@ -132,4 +139,47 @@ InstructionBreakpoint* OptionManager::BPX_must_instrument(unsigned long pc)
             return ib;
     }
     return NULL;
+}
+
+void OptionManager::CALLGRAPH_add_edge(unsigned long src, unsigned long dst)
+{
+    callgraph_edges.insert(make_pair(src, dst));
+}
+
+void OptionManager::dump_callgraph()
+{
+    ofstream out(callgraph_filename.c_str());
+    if (!out.is_open()) {
+        cerr << "[ERROR OptionManager]  \"" << callgraph_filename
+             << "\" is not a valid filename\n";
+        return;
+    }
+
+    pair<unsigned, string> moduleid_name_src, moduleid_name_dst;
+    bool                   ret_src, ret_dst;
+
+    out << "digraph {" << endl
+        << "\tnode [shape=box];" << endl
+        << "\tnode [fontname = \"monospace\"];" << endl;
+    for (auto edge : callgraph_edges) {
+        ret_src =
+            g_symbol_resolver.get_symbol_at(edge.first, &moduleid_name_src);
+        ret_dst =
+            g_symbol_resolver.get_symbol_at(edge.second, &moduleid_name_dst);
+
+        if (!ret_src || !ret_dst)
+            // If no symbols for either SRC or DST, continue.
+            // Change this if you want to include functions without symbols in
+            // callgraph
+            continue;
+
+        out << "\t\""
+            << (ret_src ? moduleid_name_src.second : hexstr(edge.first))
+            << "\" -> "
+            << "\""
+            << (ret_dst ? moduleid_name_dst.second : hexstr(edge.second))
+            << "\";" << endl;
+    }
+    out << "}" << endl;
+    out.close();
 }

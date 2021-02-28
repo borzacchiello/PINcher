@@ -39,6 +39,10 @@ VOID InstrumentCallAfter(ADDRINT call_pc, ADDRINT dest_pc, ADDRINT ret_pc)
     fi.modify_ret_value = false;
     fi.print_ret        = false;
 
+    if (g_option_manager->CALLGRAPH_is_set()) {
+        g_option_manager->CALLGRAPH_add_edge(caller_address, dest_pc);
+    }
+
     g_call_stack->push(fi);
 }
 

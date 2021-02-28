@@ -89,6 +89,10 @@ def main(args):
         cmd.append("-print_symb")
         cmd.append(args.symbs)
 
+    if args.callgraph is not None:
+        cmd.append("-dump_callgraph")
+        cmd.append(args.callgraph)
+
     cmd.append("--")
     cmd.extend(args.prog)
 
@@ -105,6 +109,8 @@ if __name__ == "__main__":
                         help='instruction breakpoint, described as key:val,... list')
     parser.add_argument('--symbs', metavar='regex', type=str,
                         nargs='?', help='print symbols that match the regex')
+    parser.add_argument('--callgraph', metavar='outfile.dot', type=str,
+                        nargs='?', help='generate the callgraph and dump it in outfile')
     parser.add_argument('prog', type=str, nargs='+',
                         help='command line of analyzed program')
     args = parser.parse_args()

@@ -9,6 +9,9 @@ Currently, it only supports x86-64 ELF binaries.
 Run `build.sh`, it will download PIN 3.13 and compile the pintool.
 
 ## Options
+#### Dump Callgraph
+`--callgraph <outfile.dot>`: dump the (partial) callgraph in _outfile.dot_.
+
 #### Print Loaded Symbols (symbs)
 `--symbs <regex>`: print all symbols loaded by the traced program that matches the regex. The regex has this shape: `<module_name>#<symbol_name>`. 
 

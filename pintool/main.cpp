@@ -17,6 +17,8 @@ ForgetfulStack<FunctionInfo>* g_call_stack;
 
 KNOB<string> KnobPrintSymbols(KNOB_MODE_WRITEONCE, "pintool", "print_symb", "",
                               "Print symbols");
+KNOB<string> KnobDumpCallGraph(KNOB_MODE_WRITEONCE, "pintool", "dump_callgraph",
+                               "", "Dump graph of called functions");
 KNOB<string> KnobBpf(KNOB_MODE_APPEND, "pintool", "bpf", "",
                      "Specify function breakpoint");
 KNOB<string> KnobBpx(KNOB_MODE_APPEND, "pintool", "bpx", "",
@@ -101,8 +103,10 @@ int main(int argc, char* argv[])
 
     FunctionInfo empty_el;
     empty_el.function_addr = 0;
+    empty_el.function_name = "dummy_entry";
 
-    g_option_manager = new OptionManager(KnobPrintSymbols, KnobBpf, KnobBpx);
+    g_option_manager = new OptionManager(KnobPrintSymbols, KnobDumpCallGraph,
+                                         KnobBpf, KnobBpx);
     g_module_info    = new ModuleInfo();
     g_call_stack     = new ForgetfulStack<FunctionInfo>(20, empty_el);
 
