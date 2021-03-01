@@ -5,7 +5,7 @@ import sys
 
 
 def usage():
-    sys.stderr.write("USAGE: %s <callgraph.dot> <function_name>\n" % sys.argv[0])
+    sys.stderr.write("USAGE: %s <callgraph.dot> <function_name> [radius]\n" % sys.argv[0])
     exit(1)
 
 def to_dot(graph):
@@ -31,8 +31,9 @@ if __name__ == "__main__":
 
     callgraph_dot_filename = sys.argv[1]
     function_name = sys.argv[2]
+    radius = sys.maxsize if len(sys.argv) < 4 else int(sys.argv[3])
 
     graph = nx.drawing.nx_pydot.read_dot(callgraph_dot_filename)
-    subgraph = graph.subgraph(nx.descendants(graph, function_name))
+    subgraph = nx.ego_graph(graph, function_name, radius=radius)
 
     print(to_dot(subgraph))

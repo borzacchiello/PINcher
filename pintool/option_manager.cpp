@@ -177,11 +177,13 @@ void OptionManager::dump_callgraph()
         bool ret_dst =
             g_symbol_resolver.get_symbol_at(edge.second, &moduleid_name_dst);
 
+#if 0
         if (!ret_src || !ret_dst)
             // If no symbols for either SRC or DST, continue.
             // Change this if you want to include functions without symbols in
             // callgraph
             continue;
+#endif
 
         out << "\t\""
             << (ret_src ? moduleid_name_src.second : hexstr(edge.first))
