@@ -77,7 +77,8 @@ VOID ImageLoad(IMG img, VOID* v)
 {
     auto module_id        = IMG_Id(img);
     auto module_name_full = IMG_Name(img);
-    g_module_info->add_img(module_id, IMG_LowAddress(img));
+    g_module_info->add_img(module_id, IMG_LowAddress(img),
+                           IMG_HighAddress(img));
     g_symbol_resolver.add_module(module_id, module_name_full);
 
     for (SYM sym = IMG_RegsymHead(img); SYM_Valid(sym); sym = SYM_Next(sym)) {

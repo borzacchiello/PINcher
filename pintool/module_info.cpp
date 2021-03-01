@@ -7,22 +7,21 @@ ADDRINT ModuleInfo::get_img_base(unsigned id)
 {
     if (img_id_to_base.find(id) == img_id_to_base.end())
         return 0;
-    return img_id_to_base[id];
+    return img_id_to_base[id].first;
 }
 
-void ModuleInfo::add_img(unsigned id, ADDRINT base)
+void ModuleInfo::add_img(unsigned id, ADDRINT base, ADDRINT end)
 {
-    img_id_to_base[id] = base;
+    img_id_to_base[id] = make_pair(base, end);
 }
 
 int ModuleInfo::get_module_id(ADDRINT address)
 {
-    // todo use interval tree
-    for (IMG img = APP_ImgHead(); IMG_Valid(img); img = IMG_Next(img))
-        for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
-            if (address >= SEC_Address(sec) &&
-                address < SEC_Address(sec) + SEC_Size(sec))
-                return IMG_Id(img);
+    for (auto it = img_id_to_base.begin(); it != img_id_to_base.end(); it++) {
+        auto pair = it->second;
+        if (address >= pair.first && address <= pair.second)
+            return it->first;
+    }
 
     return -1;
 }

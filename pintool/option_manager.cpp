@@ -161,12 +161,15 @@ void OptionManager::dump_callgraph()
         << "\tnode [shape=box];" << endl
         << "\tnode [fontname = \"monospace\"];" << endl;
     for (auto edge : callgraph_edges) {
-
         int module_id_src = g_module_info->get_module_id(edge.first);
         int module_id_dst = g_module_info->get_module_id(edge.second);
 
-        if (module_id_src != 1 || module_id_dst != 1)
-            // I'm interested in function calls of the main image
+        if (module_id_src == 2 || module_id_src == 3 || module_id_dst == 2 ||
+            module_id_dst == 3)
+            // FIXME: I'm not sure that ld and vsdo are ALWAYS loaded as second
+            //        and third image. To fix this, simply use symbol_resolver
+            //        with module name...
+            // I'm not interested in the loader
             continue;
 
         bool ret_src =
