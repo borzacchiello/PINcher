@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import networkx as nx
+import sys
+
+
+def usage():
+    sys.stderr.write("USAGE: %s <callgraph.dot> <function_name>\n" % sys.argv[0])
+    exit(1)
+
+def to_dot(graph):
+    header  = "digraph {\n"
+    header += "\tnode [shape=box];\n"
+    header += "\tnode [fontname=\"monospace\"];\n"
+    footer  = "}\n"
+
+    added = set()
+    body  = ""
+    for edge in graph.edges:
+        src, dst, _ = edge
+        if (src, dst) in added:
+            continue
+        added.add((src, dst))
+        body += "\"%s\" -> \"%s\";\n" % (src, dst)
+
+    return header + body + footer
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        usage()
+
+    callgraph_dot_filename = sys.argv[1]
+    function_name = sys.argv[2]
+
+    graph = nx.drawing.nx_pydot.read_dot(callgraph_dot_filename)
+    subgraph = graph.subgraph(nx.descendants(graph, function_name))
+
+    print(to_dot(subgraph))
