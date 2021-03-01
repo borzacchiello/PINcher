@@ -6,7 +6,7 @@ The tool can perform simple debugging tasks, such as log/modify register/memory 
 Currently, it only supports x86-64 ELF binaries.
 
 ## Build
-Run `build.sh`, it will download PIN 3.13 and compile the pintool.
+Run `build.sh`, it will download PIN 3.18 and compile the pintool.
 
 ## Options
 #### Dump Callgraph
