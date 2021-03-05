@@ -156,6 +156,7 @@ void OptionManager::dump_callgraph()
     }
 
     pair<unsigned, string> moduleid_name_src, moduleid_name_dst;
+    set<unsigned long>     visited_nodes;
 
     out << "digraph {" << endl
         << "\tnode [shape=box];" << endl
@@ -164,33 +165,66 @@ void OptionManager::dump_callgraph()
         int module_id_src = g_module_info->get_module_id(edge.first);
         int module_id_dst = g_module_info->get_module_id(edge.second);
 
-        if (module_id_src == 2 || module_id_src == 3 || module_id_dst == 2 ||
-            module_id_dst == 3)
-            // FIXME: I'm not sure that ld and vsdo are ALWAYS loaded as second
-            //        and third image. To fix this, simply use symbol_resolver
-            //        with module name...
-            // I'm not interested in the loader
+        string module_name_src =
+            module_id_src != -1
+                ? g_symbol_resolver.get_module_name(module_id_src)
+                : string("unk");
+        string module_name_dst =
+            module_id_dst != -1
+                ? g_symbol_resolver.get_module_name(module_id_dst)
+                : string("unk");
+
+#if 1
+        // filter out loader
+        if (module_name_src.compare("ld-linux-x86-64.so.2") == 0)
             continue;
-
-        bool ret_src =
-            g_symbol_resolver.get_symbol_at(edge.first, &moduleid_name_src);
-        bool ret_dst =
-            g_symbol_resolver.get_symbol_at(edge.second, &moduleid_name_dst);
-
-#if 0
-        if (!ret_src || !ret_dst)
-            // If no symbols for either SRC or DST, continue.
-            // Change this if you want to include functions without symbols in
-            // callgraph
+        if (module_name_dst.compare("ld-linux-x86-64.so.2") == 0)
+            continue;
+#endif
+#if 1
+        // filter out internal libc functions
+        if (module_name_src.compare("libc.so.6") == 0)
             continue;
 #endif
 
-        out << "\t\""
-            << (ret_src ? moduleid_name_src.second : hexstr(edge.first))
-            << "\" -> "
-            << "\""
-            << (ret_dst ? moduleid_name_dst.second : hexstr(edge.second))
-            << "\";" << endl;
+        if (visited_nodes.find(edge.first) == visited_nodes.end()) {
+            // add SRC node
+            unsigned long rebased_src =
+                edge.first - g_module_info->get_img_base(module_id_src);
+            bool ret_src =
+                g_symbol_resolver.get_symbol_at(edge.first, &moduleid_name_src);
+
+            string label = string("");
+            if (ret_src)
+                label += moduleid_name_src.second + " ";
+            label += module_name_src + "+" + hexstr(rebased_src);
+
+            out << "node_" << hexstr(edge.first) << " [label=\"" << label
+                << "\"];" << endl;
+
+            visited_nodes.insert(edge.first);
+        }
+
+        if (visited_nodes.find(edge.second) == visited_nodes.end()) {
+            // add DST node
+            unsigned long rebased_dst =
+                edge.second - g_module_info->get_img_base(module_id_dst);
+            bool ret_dst = g_symbol_resolver.get_symbol_at(edge.second,
+                                                           &moduleid_name_dst);
+
+            string label = string("");
+            if (ret_dst)
+                label += moduleid_name_dst.second + " ";
+            label += module_name_dst + "+" + hexstr(rebased_dst);
+
+            out << "node_" << hexstr(edge.second) << " [label=\"" << label
+                << "\"];" << endl;
+            visited_nodes.insert(edge.second);
+        }
+
+        out << "\t"
+            << "node_" << hexstr(edge.first) << " -> "
+            << "node_" << hexstr(edge.second) << ";" << endl;
     }
     out << "}" << endl;
     out.close();

@@ -38,7 +38,7 @@ The optional arguments are:
 - `dump_args:<size>`: if the arguments are pointers, dump `<size>` bytes of memory starting from the address pointed by the argument. 
 - `skip`: skip the execution of the function (jump to return address).
 - `rt:<value>`: force the function to return `<value>`.
-- `bt`: dump callstack (up to 20 elements).
+- `bt`: dump callstack (up to 30 elements).
 
 Ex: log all calls to `strcmp`:
 ```

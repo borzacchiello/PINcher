@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     g_option_manager = new OptionManager(KnobPrintSymbols, KnobDumpCallGraph,
                                          KnobBpf, KnobBpx);
     g_module_info    = new ModuleInfo();
-    g_call_stack     = new ForgetfulStack<FunctionInfo>(20, empty_el);
+    g_call_stack     = new ForgetfulStack<FunctionInfo>(30, empty_el);
 
     cerr.setf(std::ios::unitbuf);
 
