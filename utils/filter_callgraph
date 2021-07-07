@@ -97,7 +97,10 @@ def main(args):
             if len(tokens) < 2:
                 continue
             token = tokens[0]
-            if node_label in token:
+            if token[0] == '"':
+                token = token[1:]
+
+            if node_label == token:
                 id_from_label = n_id
                 colors[id_from_label] = "green"
                 break
