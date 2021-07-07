@@ -54,35 +54,6 @@ def main(args):
 
     colors = dict()
 
-    radius = sys.maxsize
-    if args.radius is not None:
-        radius = args.radius
-
-    if args.connected_with is not None:
-        node_label = args.connected_with
-
-        id_from_label = None
-        for n_id in graph.nodes:
-            if node_label in graph.nodes[n_id]["label"].lower().split(" ")[0]:
-                id_from_label = n_id
-                colors[id_from_label] = "green"
-                break
-        if id_from_label is not None:
-            graph = nx.ego_graph(graph, id_from_label, radius=radius)
-
-    if args.highlight_lib is not None:
-        libs = args.highlight_lib
-        for n_id in graph.nodes:
-            tokens = graph.nodes[n_id]["label"].split(" ")
-            lib_token = tokens[0] if len(tokens) == 1 else tokens[1]
-            to_color = False
-            for lib in libs:
-                if lib in lib_token:
-                    to_color = True
-                    break
-            if to_color:
-                colors[n_id] = "red"
-
     if args.filter_out_lib is not None:
         libs = args.filter_out_lib
 
@@ -112,6 +83,39 @@ def main(args):
             new_graph.add_edge(src_id, dst_id, i)
 
         graph = new_graph
+
+    radius = sys.maxsize
+    if args.radius is not None:
+        radius = args.radius
+
+    if args.connected_with is not None:
+        node_label = args.connected_with
+
+        id_from_label = None
+        for n_id in graph.nodes:
+            tokens = graph.nodes[n_id]["label"].lower().split(" ")
+            if len(tokens) < 2:
+                continue
+            token = tokens[0]
+            if node_label in token:
+                id_from_label = n_id
+                colors[id_from_label] = "green"
+                break
+        if id_from_label is not None:
+            graph = nx.ego_graph(graph, id_from_label, radius=radius)
+
+    if args.highlight_lib is not None:
+        libs = args.highlight_lib
+        for n_id in graph.nodes:
+            tokens = graph.nodes[n_id]["label"].split(" ")
+            lib_token = tokens[0] if len(tokens) == 1 else tokens[1]
+            to_color = False
+            for lib in libs:
+                if lib in lib_token:
+                    to_color = True
+                    break
+            if to_color:
+                colors[n_id] = "red"
 
     if args.demangle_cpp:
         names = list()
