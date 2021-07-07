@@ -174,14 +174,14 @@ void OptionManager::dump_callgraph()
                 ? g_symbol_resolver.get_module_name(module_id_dst)
                 : string("unk");
 
-#if 1
+#if 0
         // filter out loader
         if (module_name_src.compare("ld-linux-x86-64.so.2") == 0)
             continue;
         if (module_name_dst.compare("ld-linux-x86-64.so.2") == 0)
             continue;
 #endif
-#if 1
+#if 0
         // filter out internal libc functions
         if (module_name_src.compare("libc.so.6") == 0)
             continue;
