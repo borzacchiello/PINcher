@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import networkx as nx
+import argparse
 import sys
 
 
@@ -8,32 +9,113 @@ def usage():
     sys.stderr.write("USAGE: %s <callgraph.dot> <function_name> [radius]\n" % sys.argv[0])
     exit(1)
 
-def to_dot(graph):
+def to_dot(graph, colors=None):
     header  = "digraph {\n"
     header += "\tnode [shape=box];\n"
     header += "\tnode [fontname=\"monospace\"];\n"
     footer  = "}\n"
 
+    colors = colors or dict()
+
     added = set()
     body  = ""
+    for n_id in graph.nodes:
+        label = graph.nodes[n_id]["label"]
+        if label[0] == '"':
+            label = label[1:]
+        if label[-1] == '"':
+            label = label[:-1]
+
+        if n_id not in colors:
+            body += "\t\"%s\" [label=\"%s\"];\n" % (n_id, label)
+        else:
+            body += "\t\"%s\" [label=\"%s\", fillcolor=%s, style=filled];\n" % (n_id, label, colors[n_id])
+
     for edge in graph.edges:
         src, dst, _ = edge
         if (src, dst) in added:
             continue
         added.add((src, dst))
-        body += "\"%s\" -> \"%s\";\n" % (src, dst)
+        body += "\t\"%s\" -> \"%s\";\n" % (src, dst)
 
     return header + body + footer
 
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        usage()
-
-    callgraph_dot_filename = sys.argv[1]
-    function_name = sys.argv[2]
-    radius = sys.maxsize if len(sys.argv) < 4 else int(sys.argv[3])
-
+def main(args):
+    callgraph_dot_filename = args.callgraph
     graph = nx.drawing.nx_pydot.read_dot(callgraph_dot_filename)
-    subgraph = nx.ego_graph(graph, function_name, radius=radius)
 
-    print(to_dot(subgraph))
+    colors = dict()
+
+    radius = sys.maxsize
+    if args.radius is not None:
+        radius = args.radius
+
+    if args.connected_with is not None:
+        node_label = args.connected_with
+
+        id_from_label = None
+        for n_id in graph.nodes:
+            if node_label in graph.nodes[n_id]["label"].lower().split(" ")[0]:
+                id_from_label = n_id
+                colors[id_from_label] = "green"
+                break
+        if id_from_label is not None:
+            graph = nx.ego_graph(graph, id_from_label, radius=radius)
+
+    if args.highlight_lib is not None:
+        libs = args.highlight_lib
+        for n_id in graph.nodes:
+            tokens = graph.nodes[n_id]["label"].split(" ")
+            lib_token = tokens[0] if len(tokens) == 1 else tokens[1]
+            to_color = False
+            for lib in libs:
+                if lib in lib_token:
+                    to_color = True
+                    break
+            if to_color:
+                colors[n_id] = "red"
+
+    if args.filter_out_lib is not None:
+        libs = args.filter_out_lib
+
+        new_graph = nx.MultiDiGraph()
+        for n_id in graph.nodes:
+            label = graph.nodes[n_id]["label"]
+            tokens = label.split(" ")
+            if len(tokens) == 1:
+                token = tokens[0]
+            else:
+                token = tokens[1]
+
+            skip = False
+            for lib in libs:
+                if lib in token:
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            new_graph.add_node(n_id, label=label)
+
+        for src_id, dst_id, i in graph.edges:
+            if src_id not in new_graph.nodes or dst_id not in new_graph.nodes:
+                continue
+
+            new_graph.add_edge(src_id, dst_id, i)
+
+        graph = new_graph
+
+    print(to_dot(graph, colors))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Filter callgraph utility')
+    parser.add_argument("--highlight-lib", metavar="LIB", help="Highlight nodes of lib", nargs="*")
+    parser.add_argument("--filter-out-lib", metavar="LIB", help="Filter out functions of lib", nargs="*")
+    parser.add_argument("--connected-with", metavar="NODE", help="Keep nodes connected with this node (label)", nargs="?")
+    parser.add_argument("--radius", metavar="R",
+        help="Specify maximum connected radius R (discard nodes whose distance from connected node is greater than R). If omitted, R = inf", nargs="?", type=int)
+    parser.add_argument("callgraph", help="The callgraph in dot format")
+
+    args = parser.parse_args()
+
+    exit(main(args))
