@@ -5,7 +5,7 @@ Utility scripts
 #### filter_callgraph
 
 ```
-usage: filter_callgraph [-h] [--highlight-lib [LIB ...]] [--filter-out-lib [LIB ...]] [--connected-with [NODE]] [--radius [R]] callgraph
+usage: filter_callgraph [-h] [--highlight-lib [LIB ...]] [--filter-out-lib [LIB ...]] [--connected-with [NODE]] [--demangle-cpp] [--radius [R]] callgraph
 
 Filter callgraph utility
 
@@ -20,6 +20,7 @@ optional arguments:
                         Filter out functions of lib
   --connected-with [NODE]
                         Keep nodes connected with this node (label)
+  --demangle-cpp        Demangle C++ labels (c++filt command must be in path)
   --radius [R]          Specify maximum connected radius R (discard nodes whose distance from connected node is greater than R). If omitted, R = inf
 ```
 

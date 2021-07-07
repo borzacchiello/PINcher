@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import networkx as nx
+import subprocess
 import argparse
 import sys
 
@@ -39,6 +40,13 @@ def to_dot(graph, colors=None):
         body += "\t\"%s\" -> \"%s\";\n" % (src, dst)
 
     return header + body + footer
+
+def cpp_demangle(names):
+    proc      = subprocess.Popen(["c++filt"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    stdout, _ = proc.communicate(input="\n".join(names).encode())
+
+    res = stdout.decode("ascii").split("\n")
+    return res
 
 def main(args):
     callgraph_dot_filename = args.callgraph
@@ -105,6 +113,19 @@ def main(args):
 
         graph = new_graph
 
+    if args.demangle_cpp:
+        names = list()
+        names_dict = dict()
+
+        for i, n_id in enumerate(graph.nodes):
+            label = graph.nodes[n_id]["label"]
+            names.append(label)
+            names_dict[n_id] = i
+
+        demangled = cpp_demangle(names)
+        for n_id in graph.nodes:
+            graph.nodes[n_id]["label"] = demangled[names_dict[n_id]]
+
     print(to_dot(graph, colors))
 
 if __name__ == "__main__":
@@ -112,6 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--highlight-lib", metavar="LIB", help="Highlight nodes of lib", nargs="*")
     parser.add_argument("--filter-out-lib", metavar="LIB", help="Filter out functions of lib", nargs="*")
     parser.add_argument("--connected-with", metavar="NODE", help="Keep nodes connected with this node (label)", nargs="?")
+    parser.add_argument("--demangle-cpp", help="Demangle C++ labels (c++filt command must be in path)", action="store_true")
     parser.add_argument("--radius", metavar="R",
         help="Specify maximum connected radius R (discard nodes whose distance from connected node is greater than R). If omitted, R = inf", nargs="?", type=int)
     parser.add_argument("callgraph", help="The callgraph in dot format")
