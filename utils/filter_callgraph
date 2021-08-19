@@ -54,6 +54,23 @@ def main(args):
 
     colors = dict()
 
+    connect_mode = "forward"
+    if args.connect_mode is not None:
+        connect_mode = args.connect_mode
+        if connect_mode not in {"forward", "backward", "both"}:
+            sys.stderr.write("connect-mode must be in {\"forward\", \"backward\", \"both\"}\n")
+            usage()
+
+    if connect_mode == "forward":
+        ego_undirected = False
+        reverse_graph  = False
+    elif connect_mode == "backward":
+        ego_undirected = False
+        reverse_graph  = True
+    else:
+        ego_undirected = True
+        reverse_graph  = False
+
     if args.filter_out_lib is not None:
         libs = args.filter_out_lib
 
@@ -105,7 +122,12 @@ def main(args):
                 colors[id_from_label] = "green"
                 break
         if id_from_label is not None:
-            graph = nx.ego_graph(graph, id_from_label, radius=radius)
+            if reverse_graph:
+                graph = graph.reverse(copy=False)
+            graph = nx.ego_graph(
+                graph, id_from_label, radius=radius, undirected=ego_undirected)
+            if reverse_graph:
+                graph = graph.reverse(copy=False)
 
     if args.highlight_lib is not None:
         libs = args.highlight_lib
@@ -140,9 +162,10 @@ if __name__ == "__main__":
     parser.add_argument("--highlight-lib", metavar="LIB", help="Highlight nodes of lib", nargs="*")
     parser.add_argument("--filter-out-lib", metavar="LIB", help="Filter out functions of lib", nargs="*")
     parser.add_argument("--connected-with", metavar="NODE", help="Keep nodes connected with this node (label)", nargs="?")
-    parser.add_argument("--demangle-cpp", help="Demangle C++ labels (c++filt command must be in path)", action="store_true")
     parser.add_argument("--radius", metavar="R",
         help="Specify maximum connected radius R (discard nodes whose distance from connected node is greater than R). If omitted, R = inf", nargs="?", type=int)
+    parser.add_argument("--connect-mode", help="Select connect-with mode: forward, backward, both (default forward)", nargs="?")
+    parser.add_argument("--demangle-cpp", help="Demangle C++ labels (c++filt command must be in path)", action="store_true")
     parser.add_argument("callgraph", help="The callgraph in dot format")
 
     args = parser.parse_args()
